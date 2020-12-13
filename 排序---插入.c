@@ -1,6 +1,13 @@
 #include <stdio.h>
 int A[1000];
 
+void swap(int A[], int i, int j)
+{
+    int t = A[i];
+    A[i] = A[j];
+    A[j] = t;
+}
+
 void charu(int A[], int n)
 {
     for(int i=1; i<n; i++)
@@ -10,9 +17,8 @@ void charu(int A[], int n)
         {
             if(get<A[j])
             {
-                A[j+1] = 
+                swap(A,j+1,j);
             }
-            
         }
     }
 }
