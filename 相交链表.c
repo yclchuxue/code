@@ -50,4 +50,8 @@ struct ListNode *getIntersectionNode(struct ListNode *headA, struct ListNode *he
         }
     }
     return q;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 6f7e9c42e52d86d1ec0c4f4e6d23c7fa64a40feb
