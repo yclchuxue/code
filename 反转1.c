@@ -15,7 +15,7 @@ void print(Listnode *head)
     }
 }
 
-Listnode *dg(Listnode *qian,Listnode *hou)   // 有错误！！！
+Listnode *dg(Listnode *qian,Listnode *hou)
 {
     Listnode *p1 = qian;
     Listnode *p2 = hou;
@@ -25,7 +25,10 @@ Listnode *dg(Listnode *qian,Listnode *hou)   // 有错误！！！
         p1->next = p2;
         dg(q,p1);
     }
-    return p2;
+    if(p1 == NULL)
+    {
+        return p2;
+    }
 }
 
 Listnode *fz(Listnode *head)
@@ -39,7 +42,7 @@ Listnode *fz(Listnode *head)
     else
     {
         p = p->next;
-        head->next = NULL;
+        head->next = b;
         b = dg(p,head);
     }
 
@@ -72,6 +75,7 @@ int main()
         }
     }while(n != -1);
     print(head);
+    printf("\n");
     Listnode *s = fz(head);
     print(s);
 
