@@ -67,6 +67,21 @@ void shan(Listnode *head)                        // 删除链表的第k个节点
     }
 }
 
+void weishan(Listnode *head)
+{
+    Listnode *p = head;
+    Listnode *q = head;
+    if(head->next != NULL)
+    {
+        p = p->next;
+        for(;p->next; p = p->next)
+        {
+            q = q->next;
+        }
+        q->next = NULL;
+    }
+}
+
 int main()
 {
     int n;
@@ -97,8 +112,9 @@ int main()
 	weicha(head);
 	print(head);
     printf("\n");
-    //shanchu(head);
-    //printf(head);
+    weishan(head);
+    print(head);
+    printf("\n");
     shan(head);
     print(head);
 

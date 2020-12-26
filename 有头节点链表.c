@@ -47,6 +47,21 @@ void shanchu(Listnode *list)                    //删除第k个节点函数
     q->next = p->next;
 }
 
+void weishan(Listnode *list)
+{
+    Listnode *p = list->next;
+    Listnode *q = list->next;
+    if(list->next->next != NULL)
+    {
+        p = p->next;
+        for(;p->next; p = p->next)
+        {
+            q = q->next;
+        }
+        q->next = NULL;
+    }
+}
+
 int main()
 {
     Listnode *list = (Listnode*)malloc(sizeof(Listnode));
@@ -67,6 +82,9 @@ int main()
     print(list);
     printf("\n");
     weicha(list);
+    print(list);
+    printf("\n");
+    weishan(list);
     print(list);
     printf("\n");
     shanchu(list);
