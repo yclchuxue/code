@@ -10,7 +10,7 @@ int main()
 
             if(m<10)
             {
-                printf("0%d",m);
+                printf("%d",m);
             }
             else
             {
