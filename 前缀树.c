@@ -90,6 +90,7 @@ int main()
     char str[20];
     printf("请输入要创建数的大小：\n");
     scanf("%d",&n);
+    printf("请输入要存的单词：\n");
     Trie_node root=NULL;
     root=CreateTrie(); 
     if(root==NULL)
@@ -109,6 +110,7 @@ int main()
         scanf("%s",str);
         search_str(root,str);
         i++;
+        printf("\n");
     }
     del(root);
 
