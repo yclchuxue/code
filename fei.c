@@ -17,9 +17,4 @@ int main()
     printf("%d",c);
 
     return 0;
-    
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 6f7e9c42e52d86d1ec0c4f4e6d23c7fa64a40feb
