@@ -1,0 +1,264 @@
+#include<stdlib.h>
+#include<string.h>
+#include<Windows.h>
+struct student
+{
+	char name[20];
+	int num;
+	struct student* next;
+};
+struct account
+{
+	char x1[50];
+	char x2[50];
+}ac;
+struct student* head, * p1, * p2;
+int sum;
+void creat()
+{
+	p1 = (struct student*)malloc(sizeof(struct student));
+	printf("输入姓名\n");
+	scanf("%s", p1->name);
+	printf("输入电话\n");
+	scanf("%d", &p1->num);
+	sum++;
+	if (sum == 1)
+	{
+		head = p1;
+	}
+	else
+	{
+		p2->next = p1;
+	}
+	p2 = p1;
+	p1->next = NULL;
+	printf("添加成功\n");
+	system("pause");
+}
+void print()
+{
+	struct student* p;
+	p = head;
+	while (p)
+	{
+		printf("%s : %d\n", p->name, p->num);
+		p = p->next;
+	}
+
+}
+void ex()
+{
+	int x;
+	printf("是否保存内容\n");
+	printf("1、保存   2、不保存\n");
+	scanf("%d", &x);
+	if (x == 2)
+	{
+		system("pause");
+		return;
+	}
+	else if (x == 1)
+	{
+		FILE* fp;
+		struct student* p;
+		p = head;
+		printf("正在保存\n");
+		if (!(fp = fopen("student1.txt", "w")))
+		{
+			printf("保存失败\n");
+			system("pause");
+		}
+		while (p)
+		{
+			if ((fprintf(fp, "%s %d", p->name, p->num)) < 0)
+			{
+				printf("保存失败\n");
+				system("pause");
+			}
+			p = p->next;
+		}	fclose(fp);
+		printf("保存成功\n");
+		system("pause");
+	}
+
+}
+void showmeau()
+{
+	printf("********************************************\n");
+	printf("*************选择你要的功能*****************\n");
+	printf("*************1、增加联系人******************\n");
+	printf("*************2、查看联系人******************\n");
+	printf("*************3、删除联系人******************\n");
+	printf("*************4、保存程序  ******************\n");
+	printf("*************5、注册账户  ******************\n");
+	printf("*************5、退出程序  ******************\n");
+}
+void del()
+{
+	char n[20];
+	struct student* p1, * p2;
+	p1 = head, p2 = NULL;
+	printf("输入你想删除的人\n");
+	scanf("%s", n);
+	while (p1 != NULL && strcmp(n, p1->name) != 0)
+	{
+		p2 = p1;
+		p1 = p1->next;
+	}
+	if (p1 == NULL)
+	{
+		printf("查无此人\n");
+		system("pause");
+	}
+	else
+	{
+		if (p1 == head)
+		{
+			head = p1->next;
+			printf("删除成功\n");
+		}
+		else
+		{
+			p2->next = p1->next;
+			free(p1);
+			printf("删除成功\n");
+		}
+
+	}
+}
+void in()
+{
+	FILE* fp;
+	printf("正在导入配置\n");
+	if (!(fp = fopen("student1.txt", "r")))
+	{
+		printf("导入失败\n");
+	}
+	else
+	{
+		while (!feof(fp))
+		{
+			p1 = (struct student*)malloc(sizeof(struct student));
+			fscanf(fp, "%s %d", &p1->name, &p1->num);
+			sum++;
+			if (sum == 1)
+			{
+				head = p1;
+			}
+			else
+			{
+				p2->next = p1;
+			}
+			p2 = p1;
+			p1->next = NULL;
+		}
+		printf("导入成功\n");
+	}
+
+}
+void register_()
+{
+	char x3[50];
+	FILE* fp,*fp1;
+	if (!(fp = fopen("account.txt", "a+")))
+	{
+		printf("无法加载注册页面\n");
+	}
+	fp1 = fopen("password.txt", "a+");
+	printf("开始注册\n");
+	printf("输入账户\n");
+	scanf("%s", ac.x1);
+	printf("输入密码\n");
+	scanf("%s", ac.x2);
+ecd:
+	printf("请重复你的密码\n");
+	scanf("%s", x3);
+	if (strcmp(ac.x2, x3) != 0)
+	{
+		printf("密码有误\n");
+		goto ecd;
+	}
+	fprintf(fp, "%s", ac.x1);
+	fprintf(fp1, "%s", ac.x2);
+	printf("注册成功\n");
+	fclose(fp);
+	fclose(fp1);
+	system("pause");
+}
+void logon_()
+{
+	FILE* fp, * fp1;
+	char ch1[50], ch2[50],ch3[50],x;
+	int n = 0;
+	if (!(fp = fopen("account.txt", "r")))
+	{
+		printf("无法加载登录界面\n");
+		return;
+	}
+	if (!(fp1 = fopen("password.txt", "r")))
+	{
+		printf("无法加载登录界面\n");
+		return;
+	}
+	printf("开始登录\n");
+fff:
+	n = 0;
+	printf("输入账户\n");
+	scanf("%s", ch1);
+	getchar();
+	printf("输入密码\n");
+	scanf("%s", ch2);
+	fgets(ch3,strlen(ch1),fp);
+	while (strcmp(ch3, ch1)!=0&& feof(fp) != 0)
+	{
+		fscanf(fp, "%s", ch3);
+		n++;
+	}
+	if (feof(fp) == 0)
+	{
+		printf("查无此人\n");
+		system("pause");
+		goto fff;
+	}
+	rewind(fp1);
+	fseek(fp1, n * sizeof(ac.x1), 0);
+	fscanf(fp1, "%s", ch3);
+	if (strcmp(ch3, ch2)!=0)
+	{
+		printf("密码错误，请重新登录\n");
+		goto fff;
+	}
+	printf("登录成功\n");
+	fclose(fp);
+	fclose(fp1);
+	system("pause");
+}
+int main()
+{
+	in();
+	int s;
+	showmeau();
+	printf("\n\n\n");
+	while (1)
+	{
+		printf("\n麻溜的,你想干啥子\n");
+		scanf("%d", &s);
+		switch (s)
+		{
+		case 1:creat();
+			break;
+		case 2:print();
+			break;
+		case 3:del();
+			break;
+		case 4:ex();
+			break;
+		case 5:register_();
+			break;
+		case 6:printf("欢迎下次使用\n");
+			system("pause");
+			return 0;
+		}
+	}
+	return 0;
+}
