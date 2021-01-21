@@ -2,57 +2,58 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct listnode{
-    int val;
-    char *name;
-    struct listnode *next;
-}Listnode;
+typedef struct ListNode{
+    int value;
+    char name[5];
+    struct ListNode* next;
+}ListNode;
 
-void print(Listnode *head)
+void print(ListNode *head)
 {
-    Listnode *p = head;
+    ListNode *p = head;
     for(;p;p = p->next)
     {
-        printf("%d\t%s\n",p->val,p->name);
+        printf("%d\t%s\n",p->value,p->name);
     }
 }
 
-Listnode **hash(int n)
+int haxi(int value)
 {
-    Listnode **hashtable = (Listnode **)malloc(sizeof(*hashtable)*n);
-    memset(hashtable, 0, sizeof(Listnode));
-    return hashtable;
-}
-
-int key(int val)
-{
-    int key = 0;
-    while(val != 0)
+    int n = value;
+    int sum = 0;
+    while(n>0)
     {
-        key = key + val%10;
-        val = val/10;
+        sum = sum + n%10;
+        n = n / 10;
     }
-    return key;
+
+    return sum;
 }
 
-void creat(Listnode *head, Listnode **hash,int n)
+int main()
 {
-    Listnode *tail = NULL;
-    for(int i = 1;i<=n;i++)
+    int n;
+    printf("请输入学生人数：\n");
+    scanf("%d",&n);
+    ListNode **H = (ListNode **)malloc(sizeof(*H)*100);
+    memset(H, 0, sizeof(ListNode));
+    ListNode *head = NULL;
+    ListNode *tail = NULL;
+    for(int i = 0;i<n;i++)
     {
-        char *na = NULL;
-        int va;
-        int index = key(va);
-        printf("请输入身份证号：");
-        scanf("%d",&va);
-        printf("\n请输入姓名：");
-        scanf("%s",na);
-        Listnode *p = (Listnode*)malloc(sizeof(Listnode));
-        hash[index] = p;
-        p->val = va;
-        p->name = na;
+        int val;
+        char str[5];
+        printf("请输入学生学号：\n");
+        scanf("%d", &val);
+        printf("请输入学生姓名：\n");
+        scanf("%s", str);
+        ListNode *p = (ListNode*)malloc(sizeof(ListNode));
+        p->value = val;
+        strcpy(p->name, str);
         p->next = NULL;
-        if(tail == NULL)
+        int x = haxi(val);
+        H[x] = p;
+        if(!head)
         {
             head = p;
             tail = p;
@@ -63,22 +64,12 @@ void creat(Listnode *head, Listnode **hash,int n)
         }
         tail = p;
     }
-
-}
-
-int main()
-{
-    int n;
-    printf("请输入要存放人员信息个数：\n");
-    scanf("%d",&n);
-    Listnode *head = NULL;
-    Listnode **ha = hash(n);
-    creat(head,ha,n);
-    printf("\n请输入身份证号码：");
-    int m;
-    scanf("%d",&m);
-    int index = key(m);
-    printf("\n姓名：%s",ha[index]->name);
     print(head);
+    int m;
+    printf("请输入你要查询学生的学号:\n");
+    scanf("%d", &m);
+    int y = haxi(m);
+    printf("%s",H[y]->name);
+
     return 0;
 }
