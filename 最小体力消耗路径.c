@@ -38,5 +38,6 @@ int minimumEffortPath(int** heights, int heightsSize, int* heightsColSize)
             left = mid + 1;
         }
     }
+    
     return ans;
 }
