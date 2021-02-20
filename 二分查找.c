@@ -3,7 +3,27 @@
 
 int search(int* nums, int numsSize, int target)
 {
-    
+    /* 定义左右边界 */
+    int left = 0, right = numsSize - 1;
+    /* 定义搜索区间为闭区间[left,right] */
+    while (left <= right) 
+    {
+        int mid = left + (right - left) / 2;
+        if (nums[mid] < target) 
+        {
+            left = mid + 1;
+        } 
+        else if (nums[mid] > target) 
+        {
+            right = mid - 1;
+        } 
+        else if (nums[mid] == target) 
+        {
+            return mid;
+        }
+    }
+
+    return -1;
 }
 
 int main()
@@ -20,27 +40,4 @@ int main()
     printf("%d",x);
 
     return 0;
-}
-
-
-int search(int* nums, int numsSize, int target){
-    /* 定义左右边界 */
-    int left = 0, right = numsSize - 1;
-    /* 定义搜索区间为闭区间[left,right] */
-    while (left <= right) {
-        /* 1: mid = (left + right) / 2
-         * 2: mid = left + (right - left) / 2
-         * 第2种可以防止(left + right)直接相加数值过大越界的问题
-         */
-        int mid = left + (right - left) / 2;
-        if (nums[mid] < target) {
-            left = mid + 1;
-        } else if (nums[mid] > target) {
-            right = mid - 1;
-        } else if (nums[mid] == target) {
-            return mid;
-        }
-    }
-
-    return -1;
 }
