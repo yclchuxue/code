@@ -14,7 +14,7 @@ int pand(char *str,int len)
     return 1;
 }
 
-char * longestPalindrome(char * s)
+char *longestPalindrome(char * s)
 {
     int max = 0,x = 0,y = 0;
     int n = strlen(s) - 1;
