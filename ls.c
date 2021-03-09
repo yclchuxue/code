@@ -141,9 +141,10 @@ void display_attribute(struct stat buf,char * name,int filecolor)
 void display_s(char *name,int filecolor)
 {
 	char colorname[NAME_MAX + 30];
-	int i,len;
+	int i,len,size,j = 0;
     //剩余空间不够，就进行换行 
-	if(g_leave_len < g_maxlen){
+	if(g_leave_len < g_maxlen)
+	{
 		printf("\n");
 		g_leave_len=MAXROWLEN;
 	}
@@ -156,15 +157,21 @@ void display_s(char *name,int filecolor)
         perror("name");
         exit(1);
     }
+	size = buf.st_size/2;
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
     printf("%d",buf.st_blocks/2);
 	printf("\t%-s", colorname);
+	while(size > 0)
+	{
+		size = size/10;
+		j++;
+	}
 	//输出若个个空格，补够一个单位
     for(i=0;i<len;i++)
 		printf(" ");
 	printf(" ");
     //更新剩余空间
-	g_leave_len -= (g_maxlen+2);
+	g_leave_len -= (g_maxlen+6+j);
 }
  
  
@@ -442,16 +449,16 @@ void display_rR(int flag_param,char *fname)
 
 			2.strncpy不拷贝'\0'，要注意
 		*/
-		filename[i][len] = '/';
-        filename[i][len+1] = '\0';
+		filename[i][len] = '\0';
 		strcat(filename[i],ptr->d_name);
-		filename[i][len+strlen(ptr->d_name)+1] = '\0';
+		filename[i][len+strlen(ptr->d_name)] = '\0';
+		//printf("%s    ",filename[i]);
 	}
 
 
 	closedir(dir);
 
-
+	//按名字排序
 	for(i=0;i<count;i++)
 	{
 		for(j=i;j<count;j++)
@@ -485,15 +492,19 @@ void display_rR(int flag_param,char *fname)
         }
     }
     printf("\n");
-                                                   //printf("%s:\n",fname);
+    printf("%s:\n",fname);
+	x++;
+	if(flag_param & PARAM_A)
+	{
+		printf(".\t..\t");
+	}
     for(i = count-1;i>=0;i--)
     {
-        printf("%s\n",filename[i]);
+		//printf("b%s    ",filename[i]);
         stat(filename[i],&buf);
         if(S_ISDIR(buf.st_mode))
         {
-            dir = opendir(filename[i]);
-            ptr = readdir(dir);
+			//printf("%sa    ",filename[i]);
             len = strlen(filename[i]);
             if(filename[i][len-1] == '.' && filename[i][len-2] == '/' || filename[i][len-1] == '.' && filename[i][len-2] == '.' && filename[i][len-3] == '/')
             {
@@ -503,13 +514,150 @@ void display_rR(int flag_param,char *fname)
             len = strlen(muluname[y[x]]);
             muluname[y[x]][len] = '/';
             muluname[y[x]][len+1] = '\0';
-            x++;
             y[x]++;
         }
         display(flag_param,filename[i]);
     }
     for(i = 0;i < y[x];i++)
     {
+		//printf("%sa",muluname[i]);
+        display_rR(flag_param,muluname[i]);
+    }
+}
+
+void display_R(int flag_param,char *fname)
+{
+    DIR *dir;
+	long t;
+	int count = 0;
+	struct dirent *ptr;
+	int flag_param_temp;
+	struct stat  buf;
+    struct stat  name;
+	char filename[256][PATH_MAX+1],temp[PATH_MAX+10];
+    char muluname[256][PATH_MAX+1];
+	long filetime[256][1];
+	dir = opendir(fname);
+
+    if(dir == NULL)
+    {
+        my_err("oppendir",__LINE__);
+    }
+    //解析文件个数，及文件名的最长值
+	while((ptr = readdir(dir)) != NULL)
+	{
+		if(g_maxlen < strlen(ptr->d_name))
+		{
+			g_maxlen = strlen(ptr->d_name);
+		}
+		count++;                                 //文件个数
+	}
+
+	closedir(dir);
+
+	if(count>256)
+        printf("%d :too many files under this dir",__LINE__);
+
+	int i, j, len = strlen(fname);
+	                                                          //printf("%s\t%d",path,len);
+	dir = opendir(fname);
+	//得到该目录下的所有文件的路径
+	for(i = 0;i < count ;i++)
+	{
+		ptr = readdir(dir);
+		if(ptr == NULL)
+		{
+			my_err("oppendir",__LINE__);
+		}
+		strncpy(filename[i],fname,len);
+		/*	1.strcpy是个不安全的函数，尽量使用strncpy替代
+
+			2.strncpy不拷贝'\0'，要注意
+		*/
+		filename[i][len] = '\0';
+		strcat(filename[i],ptr->d_name);
+		filename[i][len+strlen(ptr->d_name)] = '\0';
+		//printf("%s    ",filename[i]);
+	}
+
+
+	closedir(dir);
+
+	flag_param -= PARAM_T;
+	for(i = 0;i<count;i++)
+	{
+		stat(filename[i],&buf);       //用buf获取文件filename[i]中的数据
+		filetime[i][0] = buf.st_mtime;
+	}
+
+	for(i = 0;i<count;i++)
+	{
+		for(j = i;j<count;j++)
+		{
+			if(filetime[i][0]<filetime[j][0])
+			{
+				/*交换时间filetime还要叫唤文件名*/
+				t = filetime[i][0];
+				filetime[i][0] = filetime[j][0];
+				filetime[j][0] = t;
+				strcpy(temp,filename[i]);
+				strcpy(filename[i],filename[j]);
+				strcpy(filename[j],temp);
+			}
+		}
+	}
+
+
+    //计算总用量total
+    if(flag_param & PARAM_A)
+    {
+        for(i = 0;i<count;i++)
+        {
+            stat(filename[i],&name);
+            total = total + name.st_blocks/2;
+        }
+    }
+    else
+    {
+        for(i = 0;i<count;i++)
+        {
+            stat(filename[i],&name);
+            if(filename[i][2] != '.')
+            {
+                total = total + name.st_blocks/2;
+            }
+        }
+    }
+    printf("\n");
+    printf("%s:\n",fname);
+	x++;
+	if(flag_param & PARAM_A)
+	{
+		printf(".\t..\t");
+	}
+    for(i = count-1;i>=0;i--)
+    {
+		//printf("b%s    ",filename[i]);
+        stat(filename[i],&buf);
+        if(S_ISDIR(buf.st_mode))
+        {
+			//printf("%sa    ",filename[i]);
+            len = strlen(filename[i]);
+            if(filename[i][len-1] == '.' && filename[i][len-2] == '/' || filename[i][len-1] == '.' && filename[i][len-2] == '.' && filename[i][len-3] == '/')
+            {
+                continue;
+            }
+            strncpy(muluname[y[x]],filename[i],len);
+            len = strlen(muluname[y[x]]);
+            muluname[y[x]][len] = '/';
+            muluname[y[x]][len+1] = '\0';
+            y[x]++;
+        }
+        display(flag_param,filename[i]);
+    }
+    for(i = 0;i < y[x];i++)
+    {
+		//printf("%sa",muluname[i]);
         display_rR(flag_param,muluname[i]);
     }
 }
@@ -552,7 +700,7 @@ void display_dir(int flag_param,char *path)
 	if(count>256)
         printf("%d :too many files under this dir",__LINE__);
 
-	int i, j, len;
+	int i, j, len = strlen(path);
 	                                                          //printf("%s\t%d",path,len);
 	dir = opendir(path);
 	//得到该目录下的所有文件的路径
@@ -563,13 +711,14 @@ void display_dir(int flag_param,char *path)
 		{
 			my_err("oppendir",__LINE__);
 		}
-        len = strlen((ptr->d_name));
-		strncpy(filename[i],ptr->d_name,len);
+		strncpy(filename[i],path,len);
 		/*	1.strcpy是个不安全的函数，尽量使用strncpy替代
 
 			2.strncpy不拷贝'\0'，要注意
 		*/
 		filename[i][len] = '\0';
+		strcat(filename[i],ptr->d_name);
+		filename[i][len+strlen(ptr->d_name)] = '\0';
 	}
 
 
@@ -657,19 +806,23 @@ void display_dir(int flag_param,char *path)
 		{
 			flag_param -= PARAM_RR;
             printf("./:\n");
+			if(flag_param & PARAM_A)
+			{
+				printf(".\t..\t");
+			}
 			for(i = count-1;i >= 0;i--)
 			{
                 stat(filename[i],&buf);
                 if(S_ISDIR(buf.st_mode))
                 {
-                    dir = opendir(filename[i]);
-                    ptr = readdir(dir);
                     len =strlen(filename[i]);
-                    if(filename[i][len-1] == '.' || filename[i][len-1] == '.' && filename[i][len-2] == '.')
+                    if(filename[i][len-1]=='.' && filename[i][len-2] == '/'
+					    || filename[i][len-1] == '.' && filename[i][len-2] == '.' &&filename[i][len-3]=='/')
 					{
 						continue;
 					}
                     strncpy(muluname[y[x]],filename[i],len);
+                    len = strlen(muluname[y[x]]);
                     muluname[y[x]][len] = '/';
                     muluname[y[x]][len+1] = '\0';
                     y[x]++;
@@ -679,6 +832,7 @@ void display_dir(int flag_param,char *path)
             for(i = 0;i<y[x];i++)
             {
                 //printf("%s\n",muluname[i]);
+				//exit(0);
                 display_rR(flag_param,muluname[i]);
             }
             printf("\n");
@@ -697,28 +851,40 @@ void display_dir(int flag_param,char *path)
         {
             printf("总用量: %d\n", total);
         }
-		if(flag_param & PARAM_RR)
+		if(flag_param & PARAM_RR)//递归输出
 		{
 			flag_param -= PARAM_RR;
-    		for (i = 0; i < count; i++)
+            printf("./:\n");
+			if(flag_param & PARAM_A)
 			{
-				stat(filename[i],&buf);
-				if(S_ISDIR(buf.st_mode))
-				{
-					len=strlen(filename[i]);
-					if(filename[i][len-1]=='.' && filename[i][len-2]=='/'
-						||filename[i][len-1] == '.' && filename[i][len-2]=='.'&&filename[i][len-3]=='/') 
-						continue;
-					
-					printf("\n\n%s :\n",filename[i]);
-					len=strlen(filename[i]);
-					filename[i][len]='/';
-					filename[i][len+1]='\0';		
-					display_dir(flag_param_temp,filename[i]);
-				}
-				else
-					display(flag_param,filename[i]);
+				printf(".\t..\t");
 			}
+			for(i = count-1;i >= 0;i--)
+			{
+                stat(filename[i],&buf);
+                if(S_ISDIR(buf.st_mode))
+                {
+                    len =strlen(filename[i]);
+                    if(filename[i][len-1]=='.' && filename[i][len-2] == '/'
+					    || filename[i][len-1] == '.' && filename[i][len-2] == '.' &&filename[i][len-3]=='/')
+					{
+						continue;
+					}
+                    strncpy(muluname[y[x]],filename[i],len);
+                    len = strlen(muluname[y[x]]);
+                    muluname[y[x]][len] = '/';
+                    muluname[y[x]][len+1] = '\0';
+                    y[x]++;
+                }
+                display(flag_param,filename[i]);
+			}
+            for(i = 0;i<y[x];i++)
+            {
+                //printf("%s\n",muluname[i]);
+				//exit(0);
+                display_rR(flag_param,muluname[i]);
+            }
+            printf("\n");
 		}
 		else
 		{
@@ -845,3 +1011,8 @@ int main(int argc, char *argv[])
 	}while (i < argc);
     return 0;
 }
+
+//-Rs
+//-aRl
+//-aRli
+//altirRs
