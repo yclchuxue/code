@@ -24,6 +24,7 @@
 int g_maxlen;
 int g_leave_len = MAXROWLEN;
 int total = 0;
+int h = 0;
 int x = 0;
 int y[10];
  
@@ -141,37 +142,35 @@ void display_attribute(struct stat buf,char * name,int filecolor)
 void display_s(char *name,int filecolor)
 {
 	char colorname[NAME_MAX + 30];
-	int i,len,size,j = 0;
-    //剩余空间不够，就进行换行 
-	if(g_leave_len < g_maxlen)
-	{
-		printf("\n");
-		g_leave_len=MAXROWLEN;
-	}
+	int i,len,j = 0;
+	h++;
     //名字的长度
 	len = strlen(name);
-	len = g_maxlen - len;
+	for(i=0;i<len;i++)
+	{
+		if(name[i] < 0)
+		{
+			j++;
+		}
+	}
+	len = g_maxlen - len + j/3;
     struct stat buf;
     if(stat(name,&buf) == -1)
     {
         perror("name");
         exit(1);
     }
-	size = buf.st_size/2;
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
-    printf("%d",buf.st_blocks/2);
-	printf("\t%-s", colorname);
-	while(size > 0)
-	{
-		size = size/10;
-		j++;
-	}
+    printf("%2d",buf.st_blocks/2);
+	printf("  %-s", colorname);
 	//输出若个个空格，补够一个单位
-    for(i=0;i<len;i++)
+    for(i=0;i<len+3;i++)
 		printf(" ");
-	printf(" ");
-    //更新剩余空间
-	g_leave_len -= (g_maxlen+6+j);
+	if(h == 5)
+	{
+		printf("\n");
+		h = 0;
+	}
 }
  
  
@@ -185,25 +184,31 @@ void display_s(char *name,int filecolor)
 void display_single(char *name,int filecolor)
 {
 	char colorname[NAME_MAX + 30];
-	int i,len;
-    //剩余空间不够，就进行换行 
-	if(g_leave_len < g_maxlen)
-	{
-		printf("\n");
-		g_leave_len=MAXROWLEN;
-	}
-    //名字的长度
+	int i,len,j = 0;
+	h++;
 	len = strlen(name);
-	len = g_maxlen - len;
+	for(i=0;i<len;i++)
+	{
+		if(name[i] < 0)
+		{
+			j++;
+		}
+	}
+	len = g_maxlen - len + j/3;
+
  
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
-	printf(" %-s", colorname);
-	//输出若个个空格，补够一个单位
-    for(i=0;i<len;i++)
+	printf("%-s    ", colorname);
+	for(i=0;i<len;i++)
+	{
 		printf(" ");
-	printf(" ");
-    //更新剩余空间
-	g_leave_len -= (g_maxlen+2);
+	}
+
+	if(h == 5)
+	{
+		printf("\n");
+		h = 0;
+	}
 }
  
  
@@ -216,26 +221,31 @@ void display_single(char *name,int filecolor)
 void display_st_ino(struct stat buf,char *name,int filecolor)
 {
 	char colorname[NAME_MAX + 30];
-	int i,len;
-    //剩余空间不够，就进行换行 
-	if(g_leave_len < g_maxlen+8){
-		printf("\n");
-		g_leave_len=MAXROWLEN;
-	}
+	int i,len,j = 0;
+	h++;
  
 	printf("%d ", buf.st_ino);
-    //名字的长度
-	len = strlen(name);
-	len = g_maxlen - len;
+	len = strlen(name);             //名字的长度
+	for(i=0;i<len;i++)
+	{
+		if(name[i] < 0)
+		{
+			j++;
+		}
+	}
+	len = g_maxlen - len + j/3;
+
  
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
 	printf(" %-s", colorname);
 	//输出若个个空格，补够一个单位
     for(i=0;i<len;i++)
 		printf(" ");
-	printf(" ");
-    //更新剩余空间
-	g_leave_len -= (g_maxlen+2+8);
+	if( h == 5)
+	{
+		printf("\n");
+		h = 0;
+	}
 }
 
 
@@ -359,7 +369,7 @@ void display(int flag, char * pathname)
         case PARAM_I+PARAM_S:
             if(name[0]!='.')
             {
-                printf("%d\t",buf.st_ino);            //没对齐
+                printf("%2d\t",buf.st_ino);            
                 display_s(name,filecolor);
             }
             break;
@@ -371,7 +381,7 @@ void display(int flag, char * pathname)
             break;
 
         case PARAM_A+PARAM_I+PARAM_S:
-            printf("%d\t",buf.st_ino);               //没对齐
+            printf("%d\t",buf.st_ino);               
             display_s(name,filecolor);
             break;
 
@@ -492,19 +502,13 @@ void display_rR(int flag_param,char *fname)
         }
     }
     printf("\n");
-    printf("%s:\n",fname);
+    printf("\n%s:\n",fname);
 	x++;
-	if(flag_param & PARAM_A)
-	{
-		printf(".\t..\t");
-	}
     for(i = count-1;i>=0;i--)
     {
-		//printf("b%s    ",filename[i]);
         stat(filename[i],&buf);
         if(S_ISDIR(buf.st_mode))
         {
-			//printf("%sa    ",filename[i]);
             len = strlen(filename[i]);
             if(filename[i][len-1] == '.' && filename[i][len-2] == '/' || filename[i][len-1] == '.' && filename[i][len-2] == '.' && filename[i][len-3] == '/')
             {
@@ -629,15 +633,14 @@ void display_R(int flag_param,char *fname)
         }
     }
     printf("\n");
-    printf("%s:\n",fname);
+    printf("\n%s:\n",fname);
 	x++;
-	if(flag_param & PARAM_A)
+	for(i = 0;i<count;i++)
 	{
-		printf(".\t..\t");
+		printf("%s\n",filename[i]);
 	}
     for(i = count-1;i>=0;i--)
     {
-		//printf("b%s    ",filename[i]);
         stat(filename[i],&buf);
         if(S_ISDIR(buf.st_mode))
         {
@@ -806,10 +809,6 @@ void display_dir(int flag_param,char *path)
 		{
 			flag_param -= PARAM_RR;
             printf("./:\n");
-			if(flag_param & PARAM_A)
-			{
-				printf(".\t..\t");
-			}
 			for(i = count-1;i >= 0;i--)
 			{
                 stat(filename[i],&buf);
@@ -855,10 +854,6 @@ void display_dir(int flag_param,char *path)
 		{
 			flag_param -= PARAM_RR;
             printf("./:\n");
-			if(flag_param & PARAM_A)
-			{
-				printf(".\t..\t");
-			}
 			for(i = count-1;i >= 0;i--)
 			{
                 stat(filename[i],&buf);
