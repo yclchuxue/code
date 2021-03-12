@@ -10,6 +10,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <errno.h>
+#include <signal.h>
 
 #define PARAM_NONE 0
 #define PARAM_A    1
@@ -19,12 +20,13 @@
 #define PARAM_T    16
 #define PARAM_RR   32
 #define PARAM_S    64
-#define MAXROWLEN  80
+#define MAXROWLEN  155
  
 int g_maxlen;
 int g_leave_len = MAXROWLEN;
 int total = 0;
 int h = 0;
+int han = 4;
 int x = 0;
 int y[10];
  
@@ -143,6 +145,7 @@ void display_s(char *name,int filecolor)
 {
 	char colorname[NAME_MAX + 30];
 	int i,len,j = 0;
+    int a = 0,b = 0;
 	h++;
     //名字的长度
 	len = strlen(name);
@@ -153,6 +156,7 @@ void display_s(char *name,int filecolor)
 			j++;
 		}
 	}
+
 	len = g_maxlen - len + j/3;
     struct stat buf;
     if(stat(name,&buf) == -1)
@@ -164,9 +168,9 @@ void display_s(char *name,int filecolor)
     printf("%2d",buf.st_blocks/2);
 	printf("  %-s", colorname);
 	//输出若个个空格，补够一个单位
-    for(i=0;i<len+3;i++)
+    for(i=0;i<len+5;i++)
 		printf(" ");
-	if(h == 5)
+	if(h == han)
 	{
 		printf("\n");
 		h = 0;
@@ -199,12 +203,12 @@ void display_single(char *name,int filecolor)
  
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
 	printf("%-s    ", colorname);
-	for(i=0;i<len;i++)
+	for(i=0;i<len+5;i++)
 	{
 		printf(" ");
 	}
 
-	if(h == 5)
+	if(h == han)
 	{
 		printf("\n");
 		h = 0;
@@ -239,9 +243,9 @@ void display_st_ino(struct stat buf,char *name,int filecolor)
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
 	printf(" %-s", colorname);
 	//输出若个个空格，补够一个单位
-    for(i=0;i<len;i++)
+    for(i=0;i<len+5;i++)
 		printf(" ");
-	if( h == 5)
+	if( h == han)
 	{
 		printf("\n");
 		h = 0;
@@ -309,6 +313,7 @@ void display(int flag, char * pathname)
 		case PARAM_NONE:
 			if(name[0]!='.')
             {
+                han = g_leave_len/(g_maxlen+15);
 				display_single(name,filecolor);
 			}
 			break;
@@ -316,6 +321,7 @@ void display(int flag, char * pathname)
 		case PARAM_I:
 			if(name[0]!='.')
             {
+                han = g_leave_len/(g_maxlen+15);
 				display_st_ino(buf,name,filecolor);
 			}
 			break;
@@ -323,11 +329,13 @@ void display(int flag, char * pathname)
         case PARAM_S:
             if(name[0]!='.')
             {
+                han = g_leave_len/(g_maxlen+15);
                 display_s(name,filecolor);
             }
             break;
 
 		case PARAM_A:
+            han = g_leave_len/(g_maxlen+15);
 			display_single(name,filecolor);
 			break;
  
@@ -343,10 +351,12 @@ void display(int flag, char * pathname)
 			break;
  
 		case PARAM_A+PARAM_I:
+            han = g_leave_len/(g_maxlen+15);
 			display_st_ino(buf,name,filecolor);
 			break;
 
         case PARAM_A+PARAM_S:
+            han = g_leave_len/(g_maxlen+15);
             display_s(name,filecolor);
             break;
 
@@ -367,9 +377,10 @@ void display(int flag, char * pathname)
 			break;
 
         case PARAM_I+PARAM_S:
+            han = g_leave_len/(g_maxlen+15);
             if(name[0]!='.')
             {
-                printf("%2d\t",buf.st_ino);            
+                printf("%2d  ",buf.st_ino);            
                 display_s(name,filecolor);
             }
             break;
@@ -381,7 +392,8 @@ void display(int flag, char * pathname)
             break;
 
         case PARAM_A+PARAM_I+PARAM_S:
-            printf("%d\t",buf.st_ino);               
+            han = g_leave_len/(g_maxlen+15);
+            printf("%d  ",buf.st_ino);               
             display_s(name,filecolor);
             break;
 
@@ -400,7 +412,8 @@ void display(int flag, char * pathname)
 			break;
 
         case PARAM_A+PARAM_I+PARAM_L+PARAM_S:
-        	printf("%d ",buf.st_ino);
+        	printf("%d  ",buf.st_ino);
+			printf("%d  ",buf.st_blocks/2);
 			display_attribute(buf, name,filecolor);
             break;
 				
@@ -674,6 +687,7 @@ void display_dir(int flag_param,char *path)
 	DIR *dir;
 	long t;
 	int count = 0;
+	int i, j, len;
 	struct dirent *ptr;
 	int flag_param_temp;
 	struct stat  buf;
@@ -683,6 +697,12 @@ void display_dir(int flag_param,char *path)
     char muluname[256][PATH_MAX+1];
 	flag_param_temp = flag_param;
 	dir = opendir(path);
+/*
+    for(i = 0;i < 10;i++)
+    {
+        sleep(1);
+    }
+*/
 
 	if(dir == NULL)
 	{
@@ -691,19 +711,33 @@ void display_dir(int flag_param,char *path)
 	//解析文件个数，及文件名的最长值
 	while((ptr = readdir(dir)) != NULL)
 	{
-		if(g_maxlen < strlen(ptr->d_name))
+		int a = 0;
+		int b = 0;
+		for(i = 0; i < strlen(ptr->d_name); i++)
 		{
-			g_maxlen = strlen(ptr->d_name);
+			if(ptr->d_name[i]< 0)
+			{
+				a++;
+			}
+			else
+			{
+				b++;
+			}	
+		}
+		len = a/3 + b;
+		if(g_maxlen<len)
+		{
+			g_maxlen = len;
 		}
 		count++;                                 //文件个数
 	}
+
 
 	closedir(dir);
 
 	if(count>256)
         printf("%d :too many files under this dir",__LINE__);
-
-	int i, j, len = strlen(path);
+	len = strlen(path);
 	                                                          //printf("%s\t%d",path,len);
 	dir = opendir(path);
 	//得到该目录下的所有文件的路径
@@ -723,7 +757,6 @@ void display_dir(int flag_param,char *path)
 		strcat(filename[i],ptr->d_name);
 		filename[i][len+strlen(ptr->d_name)] = '\0';
 	}
-
 
 	closedir(dir);
 
@@ -896,6 +929,12 @@ void display_dir(int flag_param,char *path)
 	
 }
 
+void sighandler(int signum)
+{
+
+    
+}
+
 int main(int argc, char *argv[])
 {
     int i, j, k, num;
@@ -906,6 +945,8 @@ int main(int argc, char *argv[])
 
     j = 0;
     num = 0;
+
+    signal(SIGINT, sighandler);
 
     //参数获取
     for(i = 1;i<argc;i++)
@@ -1007,7 +1048,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-//-Rs
-//-aRl
-//-aRli
-//altirRs
+//-Rs        出错
+//-aRl       没有.和..
+//-aRli      没有.和..
+//altirRs    没有.和..
