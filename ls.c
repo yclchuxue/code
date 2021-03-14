@@ -13,22 +13,22 @@
 #include <signal.h>
 
 #define PARAM_NONE 0
-#define PARAM_A    1
-#define PARAM_L    2
-#define PARAM_I    4
-#define PARAM_R    8
-#define PARAM_T    16
-#define PARAM_RR   32
-#define PARAM_S    64
-#define MAXROWLEN  155
+#define PARAM_A    1              //参数a
+#define PARAM_L    2              //参数l
+#define PARAM_I    4              //参数i
+#define PARAM_R    8              //参数r
+#define PARAM_T    16             //参数t
+#define PARAM_RR   32             //参数R
+#define PARAM_S    64             //参数s
+#define MAXROWLEN  155            //每行所用最大格数
  
-int g_maxlen;
+int g_maxlen;                     //最长文件名长度
 int g_leave_len = MAXROWLEN;
-int total = 0;
-int h = 0;
-int han = 4;
-int x = 0;
-int y[10];
+int total = 0;                    //文件的大小总和
+int h = 0;                        //每行已输出文件名的个数，用来判断是否换行
+int han = 4;                      //一行输出文件名的个数
+int x = 0;                        //R递归时使用
+int y[10];                        //R递归时使用
  
 /******************错误分析********************/
 void my_err(const char *err_string,int line)
@@ -40,9 +40,9 @@ void my_err(const char *err_string,int line)
 
 /*********************************************
  * 功能 ：输出文件信息  参数  -l
- * 参数1  文件信息
- * 参数2  文件名
- * 参数3  文件显示颜色
+ * 参数1  文件信息stat结构体
+ * 参数2  文件名name
+ * 参数3  文件显示颜色filecolor
  *********************************************/
 void display_attribute(struct stat buf,char * name,int filecolor)
 {
@@ -141,6 +141,12 @@ void display_attribute(struct stat buf,char * name,int filecolor)
 	printf(" %-s\n", colorname);
 }
  
+/******************************
+*功能：输出文件信息  参数  -s
+*参数1  文件名name
+*参数2  输出文件颜色filecolor
+******************************/
+
 void display_s(char *name,int filecolor)
 {
 	char colorname[NAME_MAX + 30];
@@ -182,7 +188,7 @@ void display_s(char *name,int filecolor)
 /*******************************
  * 功能 ：输出文件名
  * 参数1 文件名
- * 参数2 文件显示参数
+ * 参数2 文件名颜色filecolor
  * *****************************/
  
 void display_single(char *name,int filecolor)
@@ -217,10 +223,10 @@ void display_single(char *name,int filecolor)
  
  
 /********************************************
- * 功能：输出带有i_node的文件信息
- * 参数1 文件信息
- * 参数2 文件名
- * 参数3 显示颜色
+ * 功能：输出带有i_node的文件信息    参数 -i
+ * 参数1 文件信息stat结构体
+ * 参数2 文件名name
+ * 参数3 显示颜色filecolor
  * *****************************************/
 void display_st_ino(struct stat buf,char *name,int filecolor)
 {
@@ -242,7 +248,7 @@ void display_st_ino(struct stat buf,char *name,int filecolor)
  
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
 	printf(" %-s", colorname);
-	//输出若个个空格，补够一个单位
+	//输出少于要求，补够空格
     for(i=0;i<len+5;i++)
 		printf(" ");
 	if( h == han)
@@ -253,10 +259,11 @@ void display_st_ino(struct stat buf,char *name,int filecolor)
 }
 
 
-/********************
- * 判断是否有参数a	l	i	s
- * 确定输出时文字的颜色
- * ******************/ 
+/**************************************
+ * 功能：判断是否有参数a	l	i	s及其各种组合，确定输出时文字的颜色
+ * 参数1 输入参数的变形flag  = flag_param
+ * 参数2 文件名pathname
+ * ***********************************/ 
 void display(int flag, char * pathname)
 {
 	int filecolor = 37;
@@ -275,6 +282,7 @@ void display(int flag, char * pathname)
 	name[j] = '\0';
 
 
+    //文件名颜色
 	if(lstat(pathname, &buf) == -1)
 	{
 		my_err("stat",__LINE__);
@@ -422,12 +430,16 @@ void display(int flag, char * pathname)
 	}
 }
 
-
+/********************************************
+ * 功能：实现rR两个参数，递归实现
+ * 参数1 输入参数的变形flag_param
+ * 参数2 目录名fname
+ * *****************************************/
 void display_rR(int flag_param,char *fname)
 {
     DIR *dir;
 	long t;
-	int count = 0;
+	int count = 0,i, j, len;
 	struct dirent *ptr;
 	int flag_param_temp;
 	struct stat  buf;
@@ -444,9 +456,23 @@ void display_rR(int flag_param,char *fname)
     //解析文件个数，及文件名的最长值
 	while((ptr = readdir(dir)) != NULL)
 	{
-		if(g_maxlen < strlen(ptr->d_name))
+		int a = 0;               //用来统计汉字的个数，个数 = a/3
+		int b = 0;               //用来统计非汉字的个数 b
+		for(i = 0; i < strlen(ptr->d_name); i++)
 		{
-			g_maxlen = strlen(ptr->d_name);
+			if(ptr->d_name[i]< 0)
+			{
+				a++;
+			}
+			else
+			{
+				b++;
+			}	
+		}
+		len = a/3 + b;
+		if(g_maxlen<len)
+		{
+			g_maxlen = len;
 		}
 		count++;                                 //文件个数
 	}
@@ -456,8 +482,7 @@ void display_rR(int flag_param,char *fname)
 	if(count>256)
         printf("%d :too many files under this dir",__LINE__);
 
-	int i, j, len = strlen(fname);
-	                                                          //printf("%s\t%d",path,len);
+	len = strlen(fname);
 	dir = opendir(fname);
 	//得到该目录下的所有文件的路径
 	for(i = 0;i < count ;i++)
@@ -475,7 +500,6 @@ void display_rR(int flag_param,char *fname)
 		filename[i][len] = '\0';
 		strcat(filename[i],ptr->d_name);
 		filename[i][len+strlen(ptr->d_name)] = '\0';
-		//printf("%s    ",filename[i]);
 	}
 
 
@@ -523,6 +547,8 @@ void display_rR(int flag_param,char *fname)
         if(S_ISDIR(buf.st_mode))
         {
             len = strlen(filename[i]);
+
+			//-R时只有./根目录打开，其他../     ./.    等等目录不打开
             if(filename[i][len-1] == '.' && filename[i][len-2] == '/' || filename[i][len-1] == '.' && filename[i][len-2] == '.' && filename[i][len-3] == '/')
             {
                 continue;
@@ -537,16 +563,21 @@ void display_rR(int flag_param,char *fname)
     }
     for(i = 0;i < y[x];i++)
     {
-		//printf("%sa",muluname[i]);
         display_rR(flag_param,muluname[i]);
     }
 }
 
+
+/****************************
+ * 功能：实现参数R，递归实现
+ * 参数1 输入参数的变形flag_param
+ * 参数2 目录名fname
+ ****************************/
 void display_R(int flag_param,char *fname)
 {
     DIR *dir;
 	long t;
-	int count = 0;
+	int count = 0, len, i, j;
 	struct dirent *ptr;
 	int flag_param_temp;
 	struct stat  buf;
@@ -563,11 +594,25 @@ void display_R(int flag_param,char *fname)
     //解析文件个数，及文件名的最长值
 	while((ptr = readdir(dir)) != NULL)
 	{
-		if(g_maxlen < strlen(ptr->d_name))
+		int a = 0;               //用来统计汉字的个数，个数 = a/3
+		int b = 0;               //用来统计非汉字的个数 b
+		for(i = 0; i < strlen(ptr->d_name); i++)
 		{
-			g_maxlen = strlen(ptr->d_name);
+			if(ptr->d_name[i]< 0)
+			{
+				a++;
+			}
+			else
+			{
+				b++;
+			}	
 		}
-		count++;                                 //文件个数
+		len = a/3 + b;
+		if(g_maxlen<len)
+		{
+			g_maxlen = len;
+		}
+		count++;              //文件个数
 	}
 
 	closedir(dir);
@@ -575,8 +620,7 @@ void display_R(int flag_param,char *fname)
 	if(count>256)
         printf("%d :too many files under this dir",__LINE__);
 
-	int i, j, len = strlen(fname);
-	                                                          //printf("%s\t%d",path,len);
+	len = strlen(fname);
 	dir = opendir(fname);
 	//得到该目录下的所有文件的路径
 	for(i = 0;i < count ;i++)
@@ -594,7 +638,6 @@ void display_R(int flag_param,char *fname)
 		filename[i][len] = '\0';
 		strcat(filename[i],ptr->d_name);
 		filename[i][len+strlen(ptr->d_name)] = '\0';
-		//printf("%s    ",filename[i]);
 	}
 
 
@@ -657,8 +700,9 @@ void display_R(int flag_param,char *fname)
         stat(filename[i],&buf);
         if(S_ISDIR(buf.st_mode))
         {
-			//printf("%sa    ",filename[i]);
             len = strlen(filename[i]);
+
+			//-R时只有./根目录打开，其他../     ./.    等等目录不打开
             if(filename[i][len-1] == '.' && filename[i][len-2] == '/' || filename[i][len-1] == '.' && filename[i][len-2] == '.' && filename[i][len-3] == '/')
             {
                 continue;
@@ -673,15 +717,16 @@ void display_R(int flag_param,char *fname)
     }
     for(i = 0;i < y[x];i++)
     {
-		//printf("%sa",muluname[i]);
         display_rR(flag_param,muluname[i]);
     }
 }
 
 
-/*******************
- * 判断是否有参数R	r	t
- * ****************/
+/************************************
+ * 功能：实现参数R	r	t
+ * 参数1 输入参数的变形flag_param
+ * 参数2 要打开的目录名path
+ * **********************************/
 void display_dir(int flag_param,char *path)
 {
 	DIR *dir;
@@ -697,12 +742,13 @@ void display_dir(int flag_param,char *path)
     char muluname[256][PATH_MAX+1];
 	flag_param_temp = flag_param;
 	dir = opendir(path);
-/*
+
+    /*用来检验是否能防止ctrl + c杀死程序
     for(i = 0;i < 10;i++)
     {
         sleep(1);
     }
-*/
+    */
 
 	if(dir == NULL)
 	{
@@ -711,8 +757,8 @@ void display_dir(int flag_param,char *path)
 	//解析文件个数，及文件名的最长值
 	while((ptr = readdir(dir)) != NULL)
 	{
-		int a = 0;
-		int b = 0;
+		int a = 0;               //用来统计汉字的个数，个数 = a/3
+		int b = 0;               //用来统计非汉字的个数 b
 		for(i = 0; i < strlen(ptr->d_name); i++)
 		{
 			if(ptr->d_name[i]< 0)
@@ -738,7 +784,6 @@ void display_dir(int flag_param,char *path)
 	if(count>256)
         printf("%d :too many files under this dir",__LINE__);
 	len = strlen(path);
-	                                                          //printf("%s\t%d",path,len);
 	dir = opendir(path);
 	//得到该目录下的所有文件的路径
 	for(i = 0;i < count ;i++)
@@ -803,7 +848,7 @@ void display_dir(int flag_param,char *path)
 		}
 	}
 
-      //计算总用量total
+	//计算总用量total
     if(flag_param & PARAM_A)
     {
         for(i = 0;i<count;i++)
@@ -848,6 +893,8 @@ void display_dir(int flag_param,char *path)
                 if(S_ISDIR(buf.st_mode))
                 {
                     len =strlen(filename[i]);
+
+					//-R时只有./根目录打开，其他../     ./.    等等目录不打开
                     if(filename[i][len-1]=='.' && filename[i][len-2] == '/'
 					    || filename[i][len-1] == '.' && filename[i][len-2] == '.' &&filename[i][len-3]=='/')
 					{
@@ -863,8 +910,6 @@ void display_dir(int flag_param,char *path)
 			}
             for(i = 0;i<y[x];i++)
             {
-                //printf("%s\n",muluname[i]);
-				//exit(0);
                 display_rR(flag_param,muluname[i]);
             }
             printf("\n");
@@ -893,6 +938,8 @@ void display_dir(int flag_param,char *path)
                 if(S_ISDIR(buf.st_mode))
                 {
                     len =strlen(filename[i]);
+
+					//-R时只有./根目录打开，其他../     ./.    等等目录不打开
                     if(filename[i][len-1]=='.' && filename[i][len-2] == '/'
 					    || filename[i][len-1] == '.' && filename[i][len-2] == '.' &&filename[i][len-3]=='/')
 					{
@@ -908,8 +955,6 @@ void display_dir(int flag_param,char *path)
 			}
             for(i = 0;i<y[x];i++)
             {
-                //printf("%s\n",muluname[i]);
-				//exit(0);
                 display_rR(flag_param,muluname[i]);
             }
             printf("\n");
@@ -929,10 +974,12 @@ void display_dir(int flag_param,char *path)
 	
 }
 
+/****************************
+ * 功能：防止ctrl + c杀死程序
+ * *************************/
 void sighandler(int signum)
 {
 
-    
 }
 
 int main(int argc, char *argv[])
@@ -948,7 +995,7 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, sighandler);
 
-    //参数获取
+    //将参数提取到数组param中
     for(i = 1;i<argc;i++)
     {
         if(argv[i][0] == '-')
@@ -961,7 +1008,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    //参数详细处理
+    //将参数变形以数字形式保存进flag_param
     for(i = 0;i < j;i++)
     {
         if(param[i] == 'a')
@@ -999,6 +1046,8 @@ int main(int argc, char *argv[])
         }
     }
 
+
+    //判断是否有目录输入，没有则打开根目录./
     if(num + 1 == argc)
     {
 		strcpy(path,"./");
