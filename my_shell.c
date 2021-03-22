@@ -39,9 +39,10 @@ int main(int argc, char **argv)
     while(1)
     {
         memset(buf, 0, 256);    //将buf所指的空间清零
-        print_prompt();
-        get_input(buf);
-        /* 要退出myshell就输入exit */
+        print_prompt();         //打印工作目录
+        get_input(buf);         //获取输入,输入的命令存入buf中
+                                //printf("%s",buf);    
+        /* 要退出myshell就输入exit或logout */
         if( strcmp(buf, "exit\n") == 0 || strcmp(buf, "logout\n") == 0) 
         {
             break;
@@ -52,7 +53,14 @@ int main(int argc, char **argv)
             arglist[i][0] = '\0';
         }
         argcount = 0;
-        explain_input(buf, &argcount, arglist);      //将命令分开存入了arglist
+        explain_input(buf, &argcount, arglist);      //将buf中的命令分开存入了arglist
+        /*
+        for(i = 0; i < argcount; i++)
+        {
+            printf("%s\n",arglist[i]);
+        }
+        exit(0);
+        */
         do_cmd(argcount, arglist);
     }
 
@@ -106,7 +114,7 @@ void explain_input(char *buf, int *argcount, char (*arglist)[256])
     {
         if(p[0] == '\n')
         {
-            break;                           //退出循环
+            break;                           //检测到换行即命令结束就退出循环
         }
 
         if(p[0] == ' ')
@@ -117,7 +125,7 @@ void explain_input(char *buf, int *argcount, char (*arglist)[256])
         {
             q = p;
             number = 0;
-            while((q[0] != ' ') && (q[0] != '\n'))
+            while((q[0] != ' ') && (q[0] != '\n'))        //因为q++所以q[0]在想后走
             {
                 if(q[0] == 92)
                 {
@@ -150,7 +158,7 @@ void do_cmd(int argcount, char (*arglist)[256])
     int status;
     int i;
     int fd;
-    char *arg[argcount + 1];
+    char *arg[argcount + 1];    //指向命令arglist
     char *argnext[argcount + 1];
     pid_t pid;
     char *file;
@@ -159,7 +167,7 @@ void do_cmd(int argcount, char (*arglist)[256])
     {
         arg[i] = (char *)arglist[i];
     }
-    arg[argcount] = NULL;
+    arg[argcount] = NULL;     //用execvp打开新进程时需要arg最后一个为NULL;
 
     //查看命令行是否有后台运行符
     for(i = 0; i < argcount; i++)
@@ -276,14 +284,14 @@ void do_cmd(int argcount, char (*arglist)[256])
         {
             strcpy(arg[1], "/home/zhuxinquan/");
         }
-        if(chdir(arg[1]) ==  -1)
+        if(chdir(arg[1]) ==  -1)                             //chdir将当前工作目录该为参数工作目录
         {
             perror("cd");
         }
         return ;
     }
 
-    if((pid = fork()) < 0)
+    if((pid = fork()) < 0)           //创建子进程
     {
         printf("fork error\n");
         return ;
