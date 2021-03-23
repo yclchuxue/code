@@ -367,7 +367,7 @@ void do_cmd(int argcount, char (*arglist)[256])
                     printf("%s : command not found\n", arg[0]);
                     exit(0);
                 }
-                fd2 = open("/tmp/youdonotknowfile", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+                fd2 = open("text", O_WRONLY|O_CREAT|O_TRUNC, 0644);
                 dup2(fd2, 1);
                 execvp(arg[0], arg);
                 exit(0);
@@ -381,11 +381,10 @@ void do_cmd(int argcount, char (*arglist)[256])
                 printf("%s : command not found\n", argnext[0]);
                 exit(0);
             }
-            fd2 = open("/tmp/youdonotknowfile", O_RDONLY);
+            fd2 = open("text", O_RDONLY);
             dup2(fd2, 0);
             execvp (argnext[0], argnext);
-
-            if( remove("/tmp/youdonotknowfile") )
+            if( remove("text"))
             {
                 printf("remove error\n");
             }
