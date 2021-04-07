@@ -27,8 +27,7 @@ int g_leave_len = MAXROWLEN;
 int total = 0;                    //文件的大小总和
 int h = 0;                        //每行已输出文件名的个数，用来判断是否换行
 int han = 4;                      //一行输出文件名的个数
-int x = 0;                        //R递归时使用
-int y[10];                        //R递归时使用
+int y;                        //R递归时使用
  
 /******************错误分析********************/
 void my_err(const char *err_string,int line)
@@ -190,12 +189,11 @@ void display_s(char *name,int filecolor)
  * 参数1 文件名
  * 参数2 文件名颜色filecolor
  * *****************************/
- 
-void display_single(char *name,int filecolor)
+ void display_single(char *name,int filecolor)
 {
+	//printf("%d\t%d\n",han,g_maxlen);
 	char colorname[NAME_MAX + 30];
 	int i,len,j = 0;
-	h++;
 	len = strlen(name);
 	for(i=0;i<len;i++)
 	{
@@ -204,20 +202,29 @@ void display_single(char *name,int filecolor)
 			j++;
 		}
 	}
-	len = g_maxlen - len + j/3;
-
+	len = len - j/3;
+	//printf("%d",len);
+	if(len < 40)
+	{
+		len = 40 - len;
+	}
+	else
+	{
+		printf("\n");
+	}
+	
  
 	sprintf(colorname,"\033[%dm%s\033[0m",filecolor,name);
-	printf("%-s    ", colorname);
+	printf("%-s", colorname);
 	for(i=0;i<len+5;i++)
 	{
 		printf(" ");
 	}
-
-	if(h == han)
+	g_leave_len = g_leave_len - 45;
+	if(g_leave_len < 45)
 	{
 		printf("\n");
-		h = 0;
+		g_leave_len = MAXROWLEN;
 	}
 }
  
@@ -540,8 +547,7 @@ void display_rR(int flag_param,char *fname)
     }
     printf("\n");
     printf("\n%s:\n",fname);
-	x++;
-    for(i = count-1;i>=0;i--)
+    for(i = count-1,y = 0;i>=0;i--)
     {
         stat(filename[i],&buf);
         if(S_ISDIR(buf.st_mode))
@@ -553,15 +559,16 @@ void display_rR(int flag_param,char *fname)
             {
                 continue;
             }
-            strncpy(muluname[y[x]],filename[i],len);
-            len = strlen(muluname[y[x]]);
-            muluname[y[x]][len] = '/';
-            muluname[y[x]][len+1] = '\0';
-            y[x]++;
+            strncpy(muluname[y],filename[i],len);
+            len = strlen(muluname[y]);
+            muluname[y][len] = '/';
+            muluname[y][len+1] = '\0';
+            y++;
         }
         display(flag_param,filename[i]);
     }
-    for(i = 0;i < y[x];i++)
+	printf("%d",y);
+    for(i = 0;i < y;i++)
     {
         display_rR(flag_param,muluname[i]);
     }
@@ -690,12 +697,11 @@ void display_R(int flag_param,char *fname)
     }
     printf("\n");
     printf("\n%s:\n",fname);
-	x++;
 	for(i = 0;i<count;i++)
 	{
 		printf("%s\n",filename[i]);
 	}
-    for(i = count-1;i>=0;i--)
+    for(i = count-1,y = 0;i>=0;i--)
     {
         stat(filename[i],&buf);
         if(S_ISDIR(buf.st_mode))
@@ -707,15 +713,16 @@ void display_R(int flag_param,char *fname)
             {
                 continue;
             }
-            strncpy(muluname[y[x]],filename[i],len);
-            len = strlen(muluname[y[x]]);
-            muluname[y[x]][len] = '/';
-            muluname[y[x]][len+1] = '\0';
-            y[x]++;
+            strncpy(muluname[y],filename[i],len);
+            len = strlen(muluname[y]);
+            muluname[y][len] = '/';
+            muluname[y][len+1] = '\0';
+            y++;
         }
         display(flag_param,filename[i]);
     }
-    for(i = 0;i < y[x];i++)
+	printf("%d",y);
+    for(i = 0;i < y;i++)
     {
         display_rR(flag_param,muluname[i]);
     }
@@ -887,7 +894,7 @@ void display_dir(int flag_param,char *path)
 		{
 			flag_param -= PARAM_RR;
             printf("./:\n");
-			for(i = count-1;i >= 0;i--)
+			for(i = count-1,y = 0;i >= 0;i--)
 			{
                 stat(filename[i],&buf);
                 if(S_ISDIR(buf.st_mode))
@@ -900,15 +907,16 @@ void display_dir(int flag_param,char *path)
 					{
 						continue;
 					}
-                    strncpy(muluname[y[x]],filename[i],len);
-                    len = strlen(muluname[y[x]]);
-                    muluname[y[x]][len] = '/';
-                    muluname[y[x]][len+1] = '\0';
-                    y[x]++;
+                    strncpy(muluname[y],filename[i],len);
+                    len = strlen(muluname[y]);
+                    muluname[y][len] = '/';
+                    muluname[y][len+1] = '\0';
+                    y++;
                 }
                 display(flag_param,filename[i]);
 			}
-            for(i = 0;i<y[x];i++)
+			printf("%d",y);
+            for(i = 0;i<y;i++)
             {
                 display_rR(flag_param,muluname[i]);
             }
@@ -934,7 +942,7 @@ void display_dir(int flag_param,char *path)
             printf("./:\n");
 			for(i = count-1;i >= 0;i--)
 			{
-                stat(filename[i],&buf);
+                lstat(filename[i],&buf);
                 if(S_ISDIR(buf.st_mode))
                 {
                     len =strlen(filename[i]);
@@ -945,15 +953,15 @@ void display_dir(int flag_param,char *path)
 					{
 						continue;
 					}
-                    strncpy(muluname[y[x]],filename[i],len);
-                    len = strlen(muluname[y[x]]);
-                    muluname[y[x]][len] = '/';
-                    muluname[y[x]][len+1] = '\0';
-                    y[x]++;
+                    strncpy(muluname[y],filename[i],len);
+                    len = strlen(muluname[y]);
+                    muluname[y][len] = '/';
+                    muluname[y][len+1] = '\0';
+                    y++;
                 }
                 display(flag_param,filename[i]);
 			}
-            for(i = 0;i<y[x];i++)
+            for(i = 0;i<y;i++)
             {
                 display_rR(flag_param,muluname[i]);
             }
