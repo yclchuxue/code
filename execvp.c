@@ -15,3 +15,42 @@ int main()
 
     return 0;  
 }
+
+
+int main()
+{
+    char *argv[5],B[5][10];
+    char A[100],ch;
+    int i = 0,j = 0,k = 0,num;
+    ch = getchar();
+    while(ch != '\n')
+    {
+        A[i] = ch;
+        i++;
+        ch = getchar();
+    }
+    A[i] = '\0';
+    num = i;
+    for(i = 0; i < num ; i++)
+    {
+        j = 0;
+        while(A[i] != ' ' && i < num)
+        {
+            B[k][j] = A[i];
+            i++;
+            j++;
+        }
+        B[k][j] = '\0';
+        k++;
+    }
+
+    for(i = 0; i < k ; i++)
+    {
+        argv[i] = (char *)B[i];
+    }
+    argv[k] = NULL;
+
+    execvp(argv[0], argv);
+
+    return 0;
+}
