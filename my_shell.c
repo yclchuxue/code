@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 
-int cont[3];
+int cont[4];
 
 int chazhao(char *str)
 {
