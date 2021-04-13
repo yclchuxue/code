@@ -10,6 +10,40 @@
 
 int cont[3];
 
+int chazhao(char *str)
+{
+    DIR *dir;
+    struct dirent *dirp;
+    char *path[] = {"./", "/bin", "/usr/bin", NULL};
+
+    //使当前目录下的程序可以运行，如命令“./fork”可以被正确解释和执行
+    if( strncmp(str, "./", 2) == 0 )
+    {
+        str = str + 2;
+    }
+
+    //分别在当前目录，/bin和/usr/bin目录查找要执行的程序
+    int i = 0;
+    while(path[i] != NULL)
+    {
+        if( (dir= opendir(path[i])) ==NULL )
+        {
+            printf("can not open /bin \n");
+        }
+        while( (dirp = readdir(dir)) != NULL )
+        {
+            if(strcmp(dirp->d_name, str) == 0)
+            {
+                closedir(dir);
+                return 1;
+            }
+        }
+        closedir(dir);
+        i++;
+    }
+    return 0;
+}
+
 void tj(char **arg)
 {
     char *file;
@@ -51,7 +85,8 @@ void tj(char **arg)
     sum = cont[0] + cont[1] + cont[2] + cont[3];
     if(sum != sun)
     {
-        printf("wrong多\n");
+        printf("命令错误\n");
+        return ;
     }
     if(sum == cont[3])
     {
@@ -79,6 +114,11 @@ void tj(char **arg)
                 }
                 return ;
             }
+            if(chazhao(arg[0]) == 0)
+            {
+                printf("%s: no input files\n",arg[0]);
+                exit(1);
+            }
             execvp(arg[0], arg);
         }
     }
@@ -88,6 +128,11 @@ void tj(char **arg)
         {
             file = arg[k+1];
             arg[k] = NULL;
+            if(chazhao(arg[0]) == 0)
+            {
+                printf("%s: no input files",arg[0]);
+                exit(1);
+            }
             fd = open(file, O_RDONLY);
             dup2(fd,0);
             execvp(arg[0], arg);
@@ -99,6 +144,11 @@ void tj(char **arg)
         {
             file = arg[k+1];
             arg[k] = NULL;
+            if(chazhao(arg[0]) == 0)
+            {
+                printf("%s: no input files",arg[0]);
+                exit(1);
+            }
             fd = open(file,O_RDWR | O_CREAT | O_TRUNC, 0644);
             dup2(fd, 1);
             execvp(arg[0], arg);
@@ -110,6 +160,11 @@ void tj(char **arg)
         {
             file = arg[k+1];
             arg[k] = NULL;
+            if(chazhao(arg[0]) == 0)
+            {
+                printf("%s: no input files",arg[0]);
+                exit(1);
+            }
             fd = open(file,O_RDWR | O_CREAT | O_APPEND);
             dup2(fd,1);
             execvp(arg[0], arg);
@@ -127,6 +182,11 @@ void tj(char **arg)
             else if(pid2 == 0)
             {
                 arg[k] = NULL;
+                if(chazhao(arg[0]) == 0)
+                {
+                    printf("%s: no input files",arg[0]);
+                    exit(1);
+                }
                 fd2 = open("text", O_WRONLY|O_CREAT|O_TRUNC, 0644);
                 dup2(fd2, 1);
                 execvp(arg[0], arg);
@@ -134,10 +194,15 @@ void tj(char **arg)
             }
             if(waitpid(pid2, status2, 0) == -1)
             {
-                printf("wait for child process error\n");
+                printf("等待子进程失败\n");
             }
             fd2 = open("text", O_RDONLY);
             dup2(fd2, 0);
+            if(chazhao(arg[k+1]) == 0)
+            {
+                printf("%s: no input files",arg[0]);
+                exit(1);
+            }
             execvp (arg[k+1], arg);
             if( remove("text"))
             {
@@ -156,7 +221,7 @@ void tj(char **arg)
 
     if(waitpid(pid, status, 0) == -1)             //等待子进程结束
     {
-        printf("wrong等\n");
+        printf("等待子进程失败\n");
     }
 }
 
