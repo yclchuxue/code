@@ -13,8 +13,9 @@ int cont[3];
 void tj(char **arg)
 {
     char *file;
-    memset(cont, 0, sizeof(int)*3);
-    int i = 0,sum,j = 0,k = 1,*status = NULL,fd,sun = 0;
+    memset(cont, 0, sizeof(int)*4);
+    int i = 0,sum,j = 0,k = 1,fd,sun = 0;
+    int *status = NULL,*status2 = NULL,fd2,pid2;
     pid_t pid;
     while(arg[j] != NULL)
     {
@@ -33,19 +34,28 @@ void tj(char **arg)
             {
                 cont[2]++;
             }
+            if(arg[j][i] == '&')
+            {
+                arg[j][i] = '\0';
+                cont[3]++;
+            }
             i++;
         }
-        if(cont[0] + cont[1] + cont[2] > 0 && sun == 0)   //找到第一次出现重定向符和管道符位置
+        if(cont[0] + cont[1] + cont[2] + cont[3] > 0 && sun == 0)   //找到第一次出现重定向符和管道符位置
         {
-            sun = cont[0] + cont[1] + cont[2];
+            sun = cont[0] + cont[1] + cont[2] + cont[3];
             k = j;
         }
         j++;
     }
-    sum = cont[0] + cont[1] + cont[2];
+    sum = cont[0] + cont[1] + cont[2] + cont[3];
     if(sum != sun)
     {
         printf("wrong多\n");
+    }
+    if(sum == cont[3])
+    {
+        sum = 0;
     }
 
     pid = fork();         //子进程先运行
@@ -109,13 +119,42 @@ void tj(char **arg)
     {
         if (pid == 0)
         {
-            
+            if( (pid2 = fork()) < 0 )
+            {
+                printf("创建进程2失败\n");
+                return ;
+            }
+            else if(pid2 == 0)
+            {
+                arg[k] = NULL;
+                fd2 = open("text", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+                dup2(fd2, 1);
+                execvp(arg[0], arg);
+                exit(0);
+            }
+            if(waitpid(pid2, status2, 0) == -1)
+            {
+                printf("wait for child process error\n");
+            }
+            fd2 = open("text", O_RDONLY);
+            dup2(fd2, 0);
+            execvp (arg[k+1], arg);
+            if( remove("text"))
+            {
+                printf("remove error\n");
+            }
+            exit(0);
         }
         
     }
+    if(sum = cont[3] && cont[3] == 1)    //后台运行符 & ，支持如： ls&  和 ls &   和   ls  &
+    {
+
+        printf("process id = %d\n", pid);
+        return;
+    }
 
     if(waitpid(pid, status, 0) == -1)             //等待子进程结束
-    //if(wait(&status) == -1)
     {
         printf("wrong等\n");
     }
@@ -124,13 +163,19 @@ void tj(char **arg)
 void print()
 {
     char *msg = (char *)malloc(sizeof(char)*100);
+    char *colormsg = (char *)malloc(sizeof(char)*100);
+    char *str = "ycl@ycl-PC:~",colorstr[20];
     getcwd(msg, 100);
-    printf("%s:",msg);
+    sprintf(colormsg,"\033[%dm%s\033[0m",34,msg);
+    sprintf(colorstr,"\033[%dm%s\033[0m",31,str);
+    printf("%s%s$ ",colorstr,colormsg);
     free(msg);
+    free(colormsg);
 }
 
 int main()
 {
+    signal(SIGINT, SIG_IGN);
     while(1)
     {
         char *argv[5],B[5][10];
