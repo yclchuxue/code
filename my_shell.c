@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 
-int cont[4];
+int cont[3];
 
 int chazhao(char *str)
 {
@@ -119,7 +119,11 @@ void tj(char **arg)
                 printf("%s: no input files\n",arg[0]);
                 exit(1);
             }
-            execvp(arg[0], arg);
+            if(execvp(arg[0], arg) == -1)
+            {
+                printf("执行失败\n");
+                exit(1);
+            }
         }
     }
     if(sum == cont[0] && cont[0] == 1)          //只有一个输入重定向符 <
@@ -135,7 +139,11 @@ void tj(char **arg)
             }
             fd = open(file, O_RDONLY);
             dup2(fd,0);
-            execvp(arg[0], arg);
+            if(execvp(arg[0], arg) == -1)
+            {
+                printf("执行失败\n");
+                exit(1);
+            }
         }
     }
     if(sum == cont[1] && cont[1] == 1)           //只有一个输出重定向符 >
@@ -151,7 +159,11 @@ void tj(char **arg)
             }
             fd = open(file,O_RDWR | O_CREAT | O_TRUNC, 0644);
             dup2(fd, 1);
-            execvp(arg[0], arg);
+            if(execvp(arg[0], arg) == -1)
+            {
+                printf("执行失败\n");
+                exit(1);
+            }
         }
     } 
     if(sum == cont[1] && cont[1] == 2)           //有两个输出重定向符 >>
@@ -167,7 +179,11 @@ void tj(char **arg)
             }
             fd = open(file,O_RDWR | O_CREAT | O_APPEND);
             dup2(fd,1);
-            execvp(arg[0], arg);
+            if(execvp(arg[0], arg) == -1)
+            {
+                printf("执行失败\n");
+                exit(1);
+            }
         }
     }
     if(sum == cont[2] && cont[2] == 1)           //只有一个管道符 |
@@ -189,7 +205,11 @@ void tj(char **arg)
                 }
                 fd2 = open("text", O_WRONLY|O_CREAT|O_TRUNC, 0644);
                 dup2(fd2, 1);
-                execvp(arg[0], arg);
+                if(execvp(arg[0], arg) == -1)
+                {
+                    printf("执行失败\n");
+                    exit(1);
+                }
                 exit(0);
             }
             if(waitpid(pid2, status2, 0) == -1)
@@ -203,7 +223,11 @@ void tj(char **arg)
                 printf("%s: no input files",arg[0]);
                 exit(1);
             }
-            execvp (arg[k+1], arg);
+            if(execvp (arg[k+1], arg) == -1)
+            {
+                printf("执行失败\n");
+                exit(1);
+            }
             if( remove("text"))
             {
                 printf("remove error\n");
