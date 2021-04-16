@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <pwd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -232,9 +233,13 @@ char *rl_gets()
 {
     char name[100];
     char *msg = (char *)malloc(sizeof(char)*100);
-    char *str = "ycl@ycl-PC:~";
+    char *str = (char *)malloc(sizeof(char)*100);
+    char *usr = (char *)malloc(sizeof(char)*100);
+    struct passwd* pwd = getpwuid(getuid());
+    strcpy(usr, pwd->pw_name);
+    gethostname(str, 100);
     getcwd(msg, 100);
-    sprintf(name,"\033[%dm%s\033[0m\033[%dm%s\033[0m",31,str,34,msg);
+    sprintf(name,"\033[%dm%s@%s\033[0m\033[%dm%s$ \033[0m",31,usr,str,34,msg);
     if(ar)
     {
         free (ar);
@@ -245,7 +250,8 @@ char *rl_gets()
     if(ar && *ar)          
         add_history(ar);
     free(msg);
-
+    free(str);
+    free(usr);
     return(ar);
 }
 
@@ -263,6 +269,7 @@ int main()
         {
             continue;
         }
+        //printf("%d\n",j);
         for(i = 0; i < j; i++)
         {
             if(ar[i] < 0)
