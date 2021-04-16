@@ -7,7 +7,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
+static char *ar = (char *)NULL;
 int cont[3];
 
 int chazhao(char *str)
@@ -119,11 +122,7 @@ void tj(char **arg)
                 printf("%s: no input files\n",arg[0]);
                 exit(1);
             }
-            if(execvp(arg[0], arg) == -1)
-            {
-                printf("执行失败\n");
-                exit(1);
-            }
+            execvp(arg[0], arg);
         }
     }
     if(sum == cont[0] && cont[0] == 1)          //只有一个输入重定向符 <
@@ -139,11 +138,7 @@ void tj(char **arg)
             }
             fd = open(file, O_RDONLY);
             dup2(fd,0);
-            if(execvp(arg[0], arg) == -1)
-            {
-                printf("执行失败\n");
-                exit(1);
-            }
+            execvp(arg[0], arg);
         }
     }
     if(sum == cont[1] && cont[1] == 1)           //只有一个输出重定向符 >
@@ -159,11 +154,7 @@ void tj(char **arg)
             }
             fd = open(file,O_RDWR | O_CREAT | O_TRUNC, 0644);
             dup2(fd, 1);
-            if(execvp(arg[0], arg) == -1)
-            {
-                printf("执行失败\n");
-                exit(1);
-            }
+            execvp(arg[0], arg);
         }
     } 
     if(sum == cont[1] && cont[1] == 2)           //有两个输出重定向符 >>
@@ -179,11 +170,7 @@ void tj(char **arg)
             }
             fd = open(file,O_RDWR | O_CREAT | O_APPEND);
             dup2(fd,1);
-            if(execvp(arg[0], arg) == -1)
-            {
-                printf("执行失败\n");
-                exit(1);
-            }
+            execvp(arg[0], arg);
         }
     }
     if(sum == cont[2] && cont[2] == 1)           //只有一个管道符 |
@@ -205,11 +192,7 @@ void tj(char **arg)
                 }
                 fd2 = open("text", O_WRONLY|O_CREAT|O_TRUNC, 0644);
                 dup2(fd2, 1);
-                if(execvp(arg[0], arg) == -1)
-                {
-                    printf("执行失败\n");
-                    exit(1);
-                }
+                execvp(arg[0], arg);
                 exit(0);
             }
             if(waitpid(pid2, status2, 0) == -1)
@@ -223,11 +206,7 @@ void tj(char **arg)
                 printf("%s: no input files",arg[0]);
                 exit(1);
             }
-            if(execvp (arg[k+1], arg) == -1)
-            {
-                printf("执行失败\n");
-                exit(1);
-            }
+            execvp (arg[k+1], arg);
             if( remove("text"))
             {
                 printf("remove error\n");
@@ -249,17 +228,25 @@ void tj(char **arg)
     }
 }
 
-void print()
+char *rl_gets()
 {
+    char name[100];
     char *msg = (char *)malloc(sizeof(char)*100);
-    char *colormsg = (char *)malloc(sizeof(char)*100);
-    char *str = "ycl@ycl-PC:~",colorstr[20];
+    char *str = "ycl@ycl-PC:~";
     getcwd(msg, 100);
-    sprintf(colormsg,"\033[%dm%s\033[0m",34,msg);
-    sprintf(colorstr,"\033[%dm%s\033[0m",31,str);
-    printf("%s%s$ ",colorstr,colormsg);
+    sprintf(name,"\033[%dm%s\033[0m\033[%dm%s\033[0m",31,str,34,msg);
+    if(ar)
+    {
+        free (ar);
+        ar = (char *)NULL;
+    }
+    ar = readline(name);     //从shell读取字符并返回，有tab补全和光标移动
+
+    if(ar && *ar)          
+        add_history(ar);
     free(msg);
-    free(colormsg);
+
+    return(ar);
 }
 
 int main()
@@ -268,34 +255,33 @@ int main()
     while(1)
     {
         char *argv[5],B[5][10];
-        char A[100],ch;
-        int i = 0,j = 0,k = 0,num;
-        print();                        //打印当前工作位置
-        ch = getchar();
-        if(ch == '\n')
+        int i = 0,j = 0,k = 0,num,a = 0,b = 0;
+        //print();                        //打印当前工作位置
+        ar = rl_gets();
+        j = strlen(ar);
+        if(j <= 0)
         {
             continue;
         }
-        while(ch != '\n')
+        for(i = 0; i < j; i++)
         {
-            A[i] = ch;
-            i++;
-            ch = getchar();
+            if(ar[i] < 0)
+            {
+                a++;
+            }
+            else
+            {
+                b++;
+            }
         }
-        A[i] = '\0';
-        /*
-        if(strcmp(A,"exit") == 0)
-        {
-            return 0;
-        }
-        */
-        num = i;
+        num = a/3 + b;
+        //printf("%d\n",num);
         for(i = 0; i < num ; i++)
         {
             j = 0;
-            while(A[i] != ' ' && i < num)
+            while(ar[i] != ' ' && i < num)
             {
-                B[k][j] = A[i];
+                B[k][j] = ar[i];
                 i++;
                 j++;
             }
@@ -313,6 +299,10 @@ int main()
             break;
         }
         tj(argv);
+        //for(i = 0; i < k; i++)
+        //{
+        //    printf("%s\n",argv[i]);
+        //}
     }
     return 0;
 }
