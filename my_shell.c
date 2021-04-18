@@ -11,8 +11,14 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#define COLOR_BAGIN   "\001\033[31m\002"//强调，加粗，高亮
+#define COLOR_BAGIN2  "\001\033[34m\002"
+#define COLOR_END "\001\033[0m\002"
+#define COLOR_BKG_SEF(x,y) "\001\033["#x";"#y"m\002"
+
 static char *ar = (char *)NULL;
-int cont[3];
+static char *arg = (char *)NULL;
+int cont[4];
 
 int chazhao(char *str)
 {
@@ -239,20 +245,20 @@ char *rl_gets()
     strcpy(usr, pwd->pw_name);
     gethostname(str, 100);
     getcwd(msg, 100);
-    sprintf(name,"\033[%dm%s@%s\033[0m\033[%dm%s$ \033[0m",31,usr,str,34,msg);
+    //sprintf(name,COLOR_BAGIN COLOR_BKG_SEF(41,33)"%s@%s"COLOR_END ":" COLOR_BAGIN COLOR_BKG_SEF(46,33)"%s"COLOR_END,usr,str,msg);
+    sprintf(name,COLOR_BAGIN "%s@%s"COLOR_END ":" COLOR_BAGIN2 "%s$ "COLOR_END,usr,str,msg);
     if(ar)
     {
         free (ar);
         ar = (char *)NULL;
     }
     ar = readline(name);     //从shell读取字符并返回，有tab补全和光标移动
-
     if(ar && *ar)          
         add_history(ar);
     free(msg);
     free(str);
     free(usr);
-    return(ar);
+    return ar;
 }
 
 int main()
@@ -263,10 +269,15 @@ int main()
         char *argv[5],B[5][10];
         int i = 0,j = 0,k = 0,num,a = 0,b = 0;
         //print();                        //打印当前工作位置
-        ar = rl_gets();
+        rl_gets();
         j = strlen(ar);
         if(j <= 0)
         {
+            continue;
+        }
+        if(j > 60)
+        {
+            printf("%s:no input files\n",ar);
             continue;
         }
         //printf("%d\n",j);
