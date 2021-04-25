@@ -20,6 +20,7 @@ static char *ar = (char *)NULL;
 static char *arg = (char *)NULL;
 int cont[4];
 
+
 int chazhao(char *str)
 {
     DIR *dir;
@@ -102,28 +103,28 @@ void tj(char **arg)
     {
         sum = 0;
     }
+    if((arg[0] != NULL) && (strcmp(arg[0], "cd") == 0))
+    {
+        if(arg[1] == NULL)
+        {
+            return ;
+        }
+        if(strcmp(arg[1], "~") == 0)                         //cd ~回到用户目录
+        {
+            strcpy(arg[1], "/home/ycl/");
+        }
+        if(chdir(arg[1]) ==  -1)                             //chdir将当前工作目录该为参数工作目录
+        {
+            perror("cd");
+        }
+        return ;
+    }
 
     pid = fork();         //子进程先运行
     if(sum == 0)
     {
         if(pid == 0)
         {
-            if((arg[0] != NULL) && (strcmp(arg[0], "cd") == 0))
-            {
-                if(arg[1] == NULL)
-                {
-                    return ;
-                }
-                if(strcmp(arg[1], "~") == 0)                         //cd ~回到用户目录
-                {
-                    strcpy(arg[1], "/home/ycl/");
-                }
-                if(chdir(arg[1]) ==  -1)                             //chdir将当前工作目录该为参数工作目录
-                {
-                    perror("cd");
-                }
-                return ;
-            }
             if(chazhao(arg[0]) == 0)
             {
                 printf("%s: no input files\n",arg[0]);
@@ -264,12 +265,20 @@ char *rl_gets()
 int main()
 {
     signal(SIGINT, SIG_IGN);
+	char *path = (char *)malloc(sizeof(char)*100);
+	getcwd(path,100);
     while(1)
     {
         char *argv[5],B[5][10];
         int i = 0,j = 0,k = 0,num,a = 0,b = 0;
         //print();                        //打印当前工作位置
         rl_gets();
+        if(strcmp(ar,"exit") == 0)
+        {
+			//printf("%s",path);
+			//chdir(path);
+            exit(0);
+        }
         j = strlen(ar);
         if(j <= 0)
         {
@@ -312,10 +321,6 @@ int main()
             argv[i] = (char *)B[i];
         }
         argv[k] = NULL;   
-        if(strcmp(argv[0], "exit") == 0)
-        {
-            break;
-        }
         tj(argv);
         //for(i = 0; i < k; i++)
         //{
