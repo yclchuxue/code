@@ -13,7 +13,7 @@ int shipWithinDays(int* weights, int weightsSize, int D)
         // need 为需要运送的天数
         // cur 为当前这一天已经运送的包裹重量之和
         int need = 1, cur = 0;
-        for (int i = 0; i < weightsSize; i++) 
+        for (int i = 0; i < weightsSize; i++)       //计算运送天数
         {
             if (cur + weights[i] > mid) 
             {
