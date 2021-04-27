@@ -8,7 +8,8 @@ int search(int* nums, int numsSize, int target)
     /* 定义搜索区间为闭区间[left,right] */
     while (left <= right) 
     {
-        int mid = left + (right - left) / 2;
+        //int mid = left + (right - left) / 2;
+        int mid = (left + right)/2;
         if (nums[mid] < target) 
         {
             left = mid + 1;
@@ -28,13 +29,7 @@ int search(int* nums, int numsSize, int target)
 
 int main()
 {
-    int A[100] = {0},m,n;
-    printf("请输入数组大小和数组以及要查找的数：\n");
-    scanf("%d %d",&m,&n);
-    for(int i = 0; i < m;i++)
-    {
-        scanf("%d",&A[i]);
-    }
+    int A[100] = {1,5,6,9,10,16,24,38,90,101},m=10,n=38;
     int x = search(A,m,n);
 
     printf("%d",x);
