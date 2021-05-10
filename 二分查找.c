@@ -18,7 +18,7 @@ int search(int* nums, int numsSize, int target)
         {
             right = mid - 1;
         } 
-        else if (nums[mid] == target) 
+        else if (nums[mid] == target)         
         {
             return mid;
         }
