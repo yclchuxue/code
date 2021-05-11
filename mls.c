@@ -1,3 +1,4 @@
+//成功版本1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
