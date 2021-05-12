@@ -1,0 +1,83 @@
+1. 如何杀死僵尸进程（先别上网）
+答：
+(1).wait等待
+(2).杀死父进程，让僵尸进程变为孤儿进程
+
+
+2. 子进程段错误父进程会死么？
+ 答：不会
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+int main()
+{
+    pid_t pid;
+    pid = fork();
+    switch(pid)
+    {
+        case 1:
+            printf("创建失败\n");
+            exit(-1);
+        case 0:
+            printf("子进程运行,子进程ID:%d  父进程ID为:%d\n",getpid(),getppid());
+            /*段错误代码*/
+            unsigned char *ptr = 0x00;
+            *ptr = 0x00;
+        default:
+            for(int i = 0; i < 5 ;i++)
+            {
+                printf("父进程运行,父进程ID：%d\n",getpid());
+                sleep(3);
+            }
+    }
+
+    return 0;
+}
+
+3. 子线程段错误主进程会死么？
+答： 会
+
+#include <stdio.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void *thread1(void*arg)
+{
+    pthread_t newthid;
+
+    newthid = pthread_self();
+    printf("新建线程ID：%u\n", newthid);
+    unsigned char *ptr = 0x00;
+    *ptr = 0x00;
+    printf("线程结束\n");
+    return NULL;
+}
+
+int main()
+{
+    pthread_t thid;
+
+    printf("主线程ID：%u\n",pthread_self());
+    int ped = pthread_create(&thid,NULL,thread1,NULL);
+    printf("%d\n", ped);
+    if(ped)
+    {
+        printf("创建失败\n");
+        //exit(1);
+    }
+    for(int i = 0;i < 5 ;i++)
+    {
+        printf("主进程运行,主进程ID为：%d\n",getpid());
+        sleep(3);
+    }
+
+    exit(0);
+}
+
+4. 子进程继承了什么资源，为什么我们需要`CLOSE_EXEC`, 除了`fcntl`还有哪些linux api可以用`CLOSE_EXEC`(上网找)。
+答：ID，环境，堆栈，共享内存，打开文件时的描述符，进程组号，当前工作目录，根目录;
+因为CLOSE_EXEC让子进程获得了父进程打开文件的描述符标志，可能会让子进程有我们不想
+让它有的权限，除了fcntl还可以用dup和dup2来处理CLOSE_EXEC。
