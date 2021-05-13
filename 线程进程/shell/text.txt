@@ -1,0 +1,16 @@
+7 2 3 9 1 4 5 -1总用量 112
+-rw-r--r-- 1 ycl ycl  8118 4月  18 20:04 a.c
+-rwxr-xr-x 1 ycl ycl 16512 4月  18 21:20 a.out
+-rw-r--r-- 1 ycl ycl  8247 4月  18 20:49 b.c
+-rw-r--r-- 1 ycl ycl  2256 4月  14 20:19 c.c
+drwxr-xr-x 2 ycl ycl  4096 4月   8 15:52 ch
+-rwxr-xr-x 1 ycl ycl 16560 4月  12 19:16 d
+-rw-r--r-- 1 ycl ycl   678 4月  12 19:14 d.c
+-rw-r--r-- 1 ycl ycl   560 4月  18 21:20 e.c
+-rw-r--r-- 1 ycl ycl   564 4月  15 19:35 f.c
+-rw-r--r-- 1 ycl ycl   437 4月  18 20:33 g.c
+-rw-r--r-- 1 ycl ycl  1867 4月  18 20:31 h.c
+-rw-r--r-- 1 ycl ycl  7770 4月  18 20:05 shell.c
+-rw-r--r-- 1 ycl ycl    18 4月  13 17:45 text
+-rw-r--r-- 1 ycl ycl    16 4月  13 17:04 text.txt
+-rw-r--r-- 1 ycl ycl  5451 4月  13 16:44 ts.txt
