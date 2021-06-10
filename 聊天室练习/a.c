@@ -105,33 +105,24 @@ void zhaohui(DENN *XX,int sfd)
     write(sfd, A, sizeof(A));               //将密保问题发送到客户端
     mysql_free_result(res_ptr);
     recv(sfd, XX, sizeof(DENN),0);          //接收到客户端的答案
-    sprintf(A,"select an from student where id = %d AND an = %s",XX->id, XX->an);
+    sprintf(A,"select an from student where id = %d AND an = '%s'",XX->id, XX->an);
     //printf("%d\t%s\n",XX->id,XX->an);
     mysql_query(conn, A);
     res_ptr = mysql_store_result(conn);
     MYSQL_ROW row = mysql_fetch_row(res_ptr);
-    //mysql_free_result(res_ptr);
+    mysql_free_result(res_ptr);
 
-    if(row != NULL)
+    if(row == NULL)
     {
         strncpy(B,"答案错误",50);
-        printf("%d\n",__LINE__);
     }
     else
     {
-        printf("BBBB\n");
-        //printf("AAA%sAAA\n",row[0]);
-        sprintf(A, "select password from student where an = %s", XX->an);
+        sprintf(A, "select password from student where an = '%s'", XX->an);
         res = mysql_query(conn,A);
-        printf("CCCC\n");
         res_ptr = mysql_store_result(conn);
-        printf("FFFF\n");
         res_row = mysql_fetch_row(res_ptr);
-        printf("HHHHH\n");
         field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
-        //printf("AA%dAA\n", field);
-        //printf("%s\n",res_row[0]);
-        printf("DDDD\n");
         sprintf(B,"密码为：%s",res_row[0]);
         mysql_free_result(res_ptr);
     }
@@ -170,6 +161,8 @@ int main()
 	saddr.sin_addr.s_addr = htonl(INADDR_ANY);      //TCP
 
 	lfd = socket(AF_INET, SOCK_STREAM, 0);            //创建套接字
+    int mw_optval = 1;
+    setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, (char *)&mw_optval,sizeof(mw_optval));
 	bind(lfd, (struct sockaddr *)&saddr, sizeof(saddr));    //绑定端口
 	listen(lfd, 128);                //设置监听套接字
 
@@ -218,18 +211,18 @@ int main()
                 {
                     switch(XX->ice)
                     {
-                        case 1: 
+                        case 1:       //登陆
                             {
                                 denglu(XX, sfd);
                                 break;
                             }
-                        case 2:
+                        case 2:      //注册
                             {
                                 zhuce(XX, sfd);
                                 break;
                             }
-                        case 3:
-                            {
+                        case 3:      //找回密码
+                            { 
                                 zhaohui(XX, sfd);
                                 break;
                             }
