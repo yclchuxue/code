@@ -20,6 +20,71 @@ typedef struct denn{
 	char an[100];
 }DENN;
 
+void C_denn(DENN *XX, int socket_fd)
+{
+	int I;
+	char P[16],buf[50];
+	do
+	{
+		printf("ID:");
+		scanf("%d",&I);
+		printf("Password:");
+		scanf("%s",P);
+		XX->id = I;
+		strncpy(XX->password, P, 16);
+		//printf("id = %d,password = %s\n",XX->id,XX->password);
+		send(socket_fd, XX, sizeof(DENN),0);
+		read(socket_fd,buf, sizeof(buf));
+		printf("%s\n",buf);
+	}while(strcmp(buf,"登陆成功") != 0);
+}
+
+void C_zhuce(DENN *XX, int socket_fd)
+{
+	int I;
+	char P[16],buf[50],name[20],qu[200],an[100];
+	do
+	{
+		printf("ID:");
+		scanf("%d",&I);
+		printf("Password:");
+		scanf("%s",P);
+		printf("Name: ");
+		scanf("%s",name);
+		printf("请设置密保问题：");
+		scanf("%s",qu);
+		printf("请输入答案：");
+		scanf("%s",an);
+		XX->id = I;
+		strncpy(XX->password, P, sizeof(P));
+		strncpy(XX->name, name, sizeof(name));
+		strncpy(XX->qu, qu, sizeof(qu));
+		strncpy(XX->an, an, sizeof(an));
+		send(socket_fd, XX, sizeof(DENN),0);
+		read(socket_fd,buf, sizeof(buf));
+		printf("%s\n",buf);
+	}while (strcmp(buf,"注册成功") != 0);
+}
+
+void C_zhaohui(DENN *XX, int socket_fd)
+{
+	int I;
+	char an[100],qu[200],buf[50];
+	do
+	{
+		printf("请输入你的id：");
+		scanf("%d",&I);
+		XX->id = I;
+		send(socket_fd, XX, sizeof(DENN),0);      //将ID发送到服务器
+		read(socket_fd, qu, sizeof(qu));          //读取密保问题
+		printf("%s\n", qu);
+		scanf("%s",an);                           //回答问题
+		strncpy(XX->an, an, sizeof(an));
+		send(socket_fd, XX, sizeof(DENN),0);       //将答案发送到服务端
+		read(socket_fd, buf, sizeof(buf));
+		printf("%s\n", buf);
+	}while(strcmp(buf, "答案错误") == 0);
+}
 
 void face(DENN *XX)
 {
@@ -49,7 +114,7 @@ void face(DENN *XX)
 int main()
 {
 	DENN *XX = (DENN*)malloc(sizeof(DENN));
-	face(XX);
+	//face(XX);
 
 	int port = atoi("9999");      //从命令行获取端口号
 	if( port<1025 || port>65535 )       //0~1024一般给系统使用，一共可以分配到65535
@@ -75,70 +140,26 @@ int main()
 	{
 		perror("connect failed!\n");
 	}
-
-	if(XX->ice == 1)             //登陆
+	do
 	{
-		int I;
-		char P[16],buf[50];
-		do
+		face(XX);
+		if(XX->ice == 1)             //登陆
 		{
-			printf("ID:");
-			scanf("%d",&I);
-			printf("Password:");
-			scanf("%s",P);
-			XX->id = I;
-			strncpy(XX->password, P, 16);
-			//printf("id = %d,password = %s\n",XX->id,XX->password);
-			send(socket_fd, XX, sizeof(DENN),0);
-			read(socket_fd,buf, sizeof(buf));
-			printf("%s\n",buf);
-		}while(strcmp(buf,"登陆成功") != 0);
-	}
-	else if(XX->ice == 2)        //注册
-	{
-		int I;
-		char P[16],buf[50],name[20],qu[200],an[100];
-		do
+			C_denn(XX, socket_fd);
+			break;
+		}
+		else if(XX->ice == 2)        //注册
 		{
-			printf("ID:");
-			scanf("%d",&I);
-			printf("Password:");
-			scanf("%s",P);
-			printf("Name: ");
-			scanf("%s",name);
-			printf("请设置密保问题：");
-			scanf("%s",qu);
-			printf("请输入答案：");
-			scanf("%s",an);
-			XX->id = I;
-			strncpy(XX->password, P, sizeof(P));
-			strncpy(XX->name, name, sizeof(name));
-			strncpy(XX->qu, qu, sizeof(qu));
-			strncpy(XX->an, an, sizeof(an));
-			send(socket_fd, XX, sizeof(DENN),0);
-			read(socket_fd,buf, sizeof(buf));
-			printf("%s\n",buf);
-		} while (strcmp(buf,"注册成功") != 0);
-	} 
-	else if(XX->ice == 3)       //找回密码
-	{
-		int I;
-		char an[100],qu[200],buf[50];
-		do
+			C_zhuce(XX, socket_fd);
+			//face(XX);
+		} 
+		else if(XX->ice == 3)       //找回密码
 		{
-			printf("请输入你的id：");
-			scanf("%d",&I);
-			XX->id = I;
-			send(socket_fd, XX, sizeof(DENN),0);      //将ID发送到服务器
-			read(socket_fd, qu, sizeof(qu));          //读取密保问题
-			printf("%s\n", qu);
-			scanf("%s",an);                           //回答问题
-			strncpy(XX->an, an, sizeof(an));
-			send(socket_fd, XX, sizeof(DENN),0);       //将答案发送到服务端
-			read(socket_fd, buf, sizeof(buf));
-			printf("%s\n", buf);
-		}while(strcmp(buf, "答案错误") == 0);
-	}
+			C_zhaohui(XX, socket_fd);
+		
+			//face(XX);
+		}
+	}while(1);
 	//4 关闭通信socket
 	close(socket_fd);
  
