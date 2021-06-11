@@ -93,7 +93,7 @@ void zhuce(DENN *XX,int sfd)        //注册
         int res = mysql_query(conn,A);
         strncpy(B,"注册成功",50);
 
-        sprintf(A, "create table '%s'(id int, beizhu varchar(20), jl varchar(20))", XX->yhlb);
+        sprintf(A, "create table '%s' (id int, beizhu varchar(20), jl varchar(20))", XX->yhlb);
         mysql_query(conn,A);           //创建好友列表
     }
     //printf("A\n");
@@ -144,15 +144,50 @@ void zhaohui(DENN *XX,int sfd)
 
 void liaotian(DENN *XX, LIAOT *XZ,int sfd)
 {
-    char A[100];
+    char A[100], B[50], BUF[1024];
     if(XZ->ice == 0)       //查看所以好友
     {
-
+        int field;
+        sprintf(A, "select * from %s", XX->yhlb);
+        int res = mysql_query(conn,A);
+        if(res)
+        {
+            printf("wrong!!!\n");
+        }
+        MYSQL_RES *res_ptr;
+        MYSQL_ROW  res_row;
+        res_ptr = mysql_store_result(conn);
+        field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+        while(res_row=mysql_fetch_row(res_ptr) )
+	    {
+		    for(int i=0;i<field;i++)
+    		{
+	    		strcat(B, res_row[i]);
+                strcat(B, "\t");
+		    }
+    		write(sfd, B, sizeof(B));
+            memset(B, 0, sizeof(B));
+	    }
+        sprintf(B, "over");
+        write(sfd, B, sizeof(B));
+        mysql_free_result(res_ptr);
     }
     else if(XZ->ice == 1)      //添加好友
     {
-        sprintf(A,"insert into '%s' (id, beizhu, jl) valuse (%d, '%s', 'LTJL%d')", XX->name, XZ->id, XZ->beizhu, XZ->id);
-        mysql_query(conn,A);
+        //printf("%s\n", XX->name);
+        sprintf(A,"insert into %s (id, beizhu, jl) values (%d, '%s', 'LTJL%d')", XX->name, XZ->id, XZ->beizhu, XZ->id);
+        //printf("%s\n",A);
+        int res = mysql_query(conn,A);
+        if(res)
+        {
+            sprintf(B, "添加失败!");
+        }
+        else
+        {
+            sprintf(B, "添加成功！");
+        }
+        write(sfd, B, sizeof(B));
+        
     }
 
 }
@@ -255,8 +290,22 @@ int main()
                                 break;
                             }
                     }
+                    
+                    //获取name
+                    char A[100];
+                    MYSQL_RES *res_ptr;
+                    MYSQL_ROW  res_row;
+                    sprintf(A, "select name from student where id = %d", XX->id);
+                    mysql_query(conn,A);
+                    res_ptr = mysql_store_result(conn);
+                    res_row = mysql_fetch_row(res_ptr);
+                    //printf("%s\n", res_row[0]);
+                    strncpy(XX->name, res_row[0], sizeof(XX->name));   
+                    strncpy(XX->yhlb, res_row[0], sizeof(XX->yhlb));   //yhlb与name相同
+                    mysql_free_result(res_ptr);
+
                     LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-                    recv(sfd, XZ, sizeof(LIAOT), 0);
+                    recv(sfd, XZ, sizeof(LIAOT), 0);       //接受到客户端信息，判断客户端需要的功能
                     liaotian(XX, XZ, sfd);
                 }
             }
