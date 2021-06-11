@@ -18,7 +18,15 @@ typedef struct denn{
 	char password[16];
 	char qu[200];
 	char an[100];
+	char yhlb[20];
 }DENN;
+
+typedef struct liaot{
+	int ice;
+	int id;
+	char beizhu[20];
+    char xinxi[200];
+}LIAOT;
 
 void C_denn(DENN *XX, int socket_fd)
 {
@@ -60,6 +68,7 @@ void C_zhuce(DENN *XX, int socket_fd)
 		strncpy(XX->name, name, sizeof(name));
 		strncpy(XX->qu, qu, sizeof(qu));
 		strncpy(XX->an, an, sizeof(an));
+		strncpy(XX->yhlb, name, sizeof(name));
 		send(socket_fd, XX, sizeof(DENN),0);
 		read(socket_fd,buf, sizeof(buf));
 		printf("%s\n",buf);
@@ -160,6 +169,30 @@ int main()
 			//face(XX);
 		}
 	}while(1);
+
+	int ic;
+	LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+	printf("***********************************\n");
+	printf("**************1 添加好友************\n");
+	scanf("%d", &ic);
+	XZ->ice = ic;
+	do
+	{
+		if(ic == 1)      //添加好友
+		{
+			int I;
+			char B[20];
+			printf("请输入好友ID:");
+			scanf("%d", &I);
+			printf("请输入备注:");
+			scanf("%s", B);
+			XZ->id = I;
+			strncpy(XZ->beizhu, B, sizeof(B));
+			send(socket_fd, XZ, sizeof(LIAOT),0);
+		}
+	} while (1);
+	
+
 	//4 关闭通信socket
 	close(socket_fd);
  
