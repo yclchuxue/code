@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 
 MYSQL *conn;
+
 typedef struct denn{
 	int ice;
 	int id;
@@ -22,7 +23,15 @@ typedef struct denn{
 	char password[16];
     char qu[200];
     char an[100];
+    char yhlb[20];
 }DENN;
+
+typedef struct liaot{
+	int ice;
+	int id;
+    char beizhu[20];
+    char xinxi[200];
+}LIAOT;
 
 #define OPEN_MAX 1024
 
@@ -80,9 +89,12 @@ void zhuce(DENN *XX,int sfd)        //注册
     }
     else
     {
-        sprintf(A, "insert into student (id,password,name,qu,an) values (%d, '%s', '%s', '%s', '%s')",XX->id, XX->password,XX->name,XX->qu,XX->an);
+        sprintf(A, "insert into student (id,password,name,qu,an,yhlb) values (%d, '%s', '%s', '%s', '%s', '%s')",XX->id, XX->password,XX->name,XX->qu,XX->an, XX->yhlb);
         int res = mysql_query(conn,A);
         strncpy(B,"注册成功",50);
+
+        sprintf(A, "create table '%s'(id int, beizhu varchar(20), jl varchar(20))", XX->yhlb);
+        mysql_query(conn,A);           //创建好友列表
     }
     //printf("A\n");
     write(sfd, B, sizeof(B));
@@ -127,6 +139,22 @@ void zhaohui(DENN *XX,int sfd)
         mysql_free_result(res_ptr);
     }
     write(sfd, B, sizeof(B));        //将密码发送到客户端
+}
+
+
+void liaotian(DENN *XX, LIAOT *XZ,int sfd)
+{
+    char A[100];
+    if(XZ->ice == 0)       //查看所以好友
+    {
+
+    }
+    else if(XZ->ice == 1)      //添加好友
+    {
+        sprintf(A,"insert into '%s' (id, beizhu, jl) valuse (%d, '%s', 'LTJL%d')", XX->name, XZ->id, XZ->beizhu, XZ->id);
+        mysql_query(conn,A);
+    }
+
 }
 
 int main()
@@ -227,6 +255,9 @@ int main()
                                 break;
                             }
                     }
+                    LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+                    recv(sfd, XZ, sizeof(LIAOT), 0);
+                    liaotian(XX, XZ, sfd);
                 }
             }
         }
