@@ -15,29 +15,187 @@
 #include <arpa/inet.h>
 
 MYSQL *conn;
+
 typedef struct denn{
 	int ice;
 	int id;
-	char name[10];
+	char name[20];
 	char password[16];
+    char qu[200];
+    char an[100];
+    char yhlb[20];
 }DENN;
 
+typedef struct liaot{
+	int ice;
+	int id;
+    char beizhu[20];
+    char xinxi[200];
+}LIAOT;
 
 #define OPEN_MAX 1024
+
+void denglu(DENN *XX,int sfd)            //登陆
+{
+    int row, res;
+    char A[100],B[50];
+    sprintf(A, "select id from student where id = %d", XX->id);
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    res = mysql_query(conn,A);
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    mysql_free_result(res_ptr);
+    if(res_row == NULL)
+    {
+        //id错误
+        strncpy(B,"无此id",50);
+    }
+    else
+    {
+        sprintf(A, "select id from student where id = %d and password = %s", XX->id, XX->password);
+        res = mysql_query(conn,A);
+        res_ptr = mysql_store_result(conn);
+        res_row = mysql_fetch_row(res_ptr);                   
+        if(res_row == NULL)
+        {
+        //password错误
+            strncpy(B,"密码错误",50);
+        }
+        else
+        {
+            strncpy(B,"登陆成功",50);
+        }
+        mysql_free_result(res_ptr);
+    }
+    write(sfd, B, sizeof(B));
+}
+
+void zhuce(DENN *XX,int sfd)        //注册
+{
+    int res;
+    char A[100],B[50];
+    sprintf(A, "select id from student where id = %d", XX->id);
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    res = mysql_query(conn,A);
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    mysql_free_result(res_ptr);
+    if(res_row)
+    {
+        //id已经存在
+        strncpy(B,"id已经被注册，请更换一个id",50);
+    }
+    else
+    {
+        sprintf(A, "insert into student (id,password,name,qu,an,yhlb) values (%d, '%s', '%s', '%s', '%s', '%s')",XX->id, XX->password,XX->name,XX->qu,XX->an, XX->yhlb);
+        int res = mysql_query(conn,A);
+        strncpy(B,"注册成功",50);
+
+        sprintf(A, "create table '%s' (id int, beizhu varchar(20), jl varchar(20))", XX->yhlb);
+        mysql_query(conn,A);           //创建好友列表
+    }
+    //printf("A\n");
+    write(sfd, B, sizeof(B));
+}
+
+void zhaohui(DENN *XX,int sfd)
+{
+    int res, field;
+    char A[200],B[50],C[100];
+    sprintf(A, "select qu from student where id = %d", XX->id);
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    res = mysql_query(conn,A);
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+    //printf("AA%dAA\n", field);
+    //printf("%s\n",res_row[0]);
+    strncpy(A,res_row[0],200);
+    write(sfd, A, sizeof(A));               //将密保问题发送到客户端
+    mysql_free_result(res_ptr);
+    recv(sfd, XX, sizeof(DENN),0);          //接收到客户端的答案
+    sprintf(A,"select an from student where id = %d AND an = '%s'",XX->id, XX->an);
+    //printf("%d\t%s\n",XX->id,XX->an);
+    mysql_query(conn, A);
+    res_ptr = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(res_ptr);
+    mysql_free_result(res_ptr);
+
+    if(row == NULL)
+    {
+        strncpy(B,"答案错误",50);
+    }
+    else
+    {
+        sprintf(A, "select password from student where an = '%s'", XX->an);
+        res = mysql_query(conn,A);
+        res_ptr = mysql_store_result(conn);
+        res_row = mysql_fetch_row(res_ptr);
+        field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+        sprintf(B,"密码为：%s",res_row[0]);
+        mysql_free_result(res_ptr);
+    }
+    write(sfd, B, sizeof(B));        //将密码发送到客户端
+}
+
+
+void liaotian(DENN *XX, LIAOT *XZ,int sfd)
+{
+    char A[100];
+    if(XZ->ice == 0)       //查看所以好友
+    {
+        int field;
+        sprintf(A, "select * from '%s'", XX->yhlb);
+        mysql_query(conn,A);
+        MYSQL_RES *res_ptr;
+        MYSQL_ROW  res_row;
+        res_ptr = mysql_store_result(conn);
+        field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+        while(res_row=mysql_fetch_row(res_ptr) )
+	    {
+		    for(int i=0;i<field;i++)
+    		{
+	    		printf("%s\t",res_row[i]);
+		    }
+    		printf("\n");
+	    }
+    }
+    else if(XZ->ice == 1)      //添加好友
+    {
+        printf("%s\n", XX->name);
+        sprintf(A,"insert into %s (id, beizhu, jl) values (%d, '%s', 'LTJL%d')", XX->name, XZ->id, XZ->beizhu, XZ->id);
+        printf("%s\n",A);
+        int res = mysql_query(conn,A);
+        if(res)
+        {
+            printf("wrong!!!\n");
+        }
+        else
+        {
+            printf("ok!!!!\n");
+        }
+        
+    }
+
+}
 
 int main()
 {
     DENN *XX = (DENN*)malloc(sizeof(DENN));
 
     conn = mysql_init(conn);    //初始化一个句柄
+    mysql_library_init(0,NULL,NULL);   //初始化数据库
 
     if(conn == NULL)
     {
         printf("mysql_init failed!!!\n");
         exit(1);
     }
-
     conn = mysql_real_connect(conn,"127.0.0.1","root","181219","db1",0,NULL,0);  //连接数据库
+    mysql_set_character_set(conn,"utf8");      //调整为中文字符
 
     if(conn == NULL)
     {
@@ -56,6 +214,8 @@ int main()
 	saddr.sin_addr.s_addr = htonl(INADDR_ANY);      //TCP
 
 	lfd = socket(AF_INET, SOCK_STREAM, 0);            //创建套接字
+    int mw_optval = 1;
+    setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, (char *)&mw_optval,sizeof(mw_optval));
 	bind(lfd, (struct sockaddr *)&saddr, sizeof(saddr));    //绑定端口
 	listen(lfd, 128);                //设置监听套接字
 
@@ -69,7 +229,7 @@ int main()
     ret = epoll_ctl(efd, EPOLL_CTL_ADD, lfd, &tep);     //将监听套接字加入等待队列
 
     int j = 0;
-    while(j < 5)
+    while(1)
     {
         j++;
         nready = epoll_wait(efd, ep, OPEN_MAX, -1);     //等待就绪套接字，将就绪套接字放入响应队列，返回响应套接字的个数
@@ -92,47 +252,49 @@ int main()
             {
                 sfd = ep[i].data.fd;
                 //n = read(sfd, buf, sizeof(buf));         //读取套接字内容
-                recv(sfd, XX, sizeof(DENN),0);
+                n = recv(sfd, XX, sizeof(DENN),0);
                 //printf("%d\n",XX->ice);
                 //printf("id = %d,password = %s\n",XX->id,XX->password);//无限循环
-                if(n == 0)         //内容已经读完
+                if(n == 0)         //客户端关闭
                 {
                     ret = epoll_ctl(efd, EPOLL_CTL_DEL, sfd, NULL);    //将套接字sfd从等待队列中删除
                     close(sfd);        //关闭该套接字
                 }
                 else
                 {
-                    int row, res;
-                    char A[100],B[20];
-                    sprintf(A, "select id from student where id = %d", XX->id);
+                    switch(XX->ice)
+                    {
+                        case 1:       //登陆
+                            {
+                                denglu(XX, sfd);
+                                break;
+                            }
+                        case 2:      //注册
+                            {
+                                zhuce(XX, sfd);
+                                break;
+                            }
+                        case 3:      //找回密码
+                            { 
+                                zhaohui(XX, sfd);
+                                break;
+                            }
+                    }
+                    
+                    //获取name
+                    char A[100];
                     MYSQL_RES *res_ptr;
                     MYSQL_ROW  res_row;
-                    res = mysql_query(conn,A);
+                    sprintf(A, "select name from student where id = %d", XX->id);
+                    mysql_query(conn,A);
                     res_ptr = mysql_store_result(conn);
                     res_row = mysql_fetch_row(res_ptr);
+                    //printf("%s\n", res_row[0]);
+                    strncpy(XX->name, res_row[0], sizeof(XX->name));
 
-                    if(res_row == NULL)
-                    {
-                        //id错误
-                        strncpy(B,"无此id",20);
-                    }
-                    else
-                    {
-                        sprintf(A, "select id from student where id = %d and password = %s", XX->id, XX->password);
-                        res = mysql_query(conn,A);
-                        res_ptr = mysql_store_result(conn);
-                        res_row = mysql_fetch_row(res_ptr);                   
-                        if(res_row == NULL)
-                        {
-                            //password错误
-                            strncpy(B,"密码错误",20);
-                        }
-                        else
-                        {
-                            strncpy(B,"登陆成功",20);
-                        }
-                    }
-                    write(sfd, B, sizeof(B));
+                    LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+                    recv(sfd, XZ, sizeof(LIAOT), 0);       //接受到客户端信息，判断客户端需要的功能
+                    liaotian(XX, XZ, sfd);
                 }
             }
         }
@@ -140,27 +302,3 @@ int main()
     close(lfd);
     return 0;
 }
-
-/*
-int main()
-{
-
-    conn = mysql_init(conn);    //初始化一个句柄
-
-    if(conn == NULL)
-    {
-        printf("mysql_init failed!!!\n");
-        exit(1);
-    }
-
-    conn = mysql_real_connect(conn,"127.0.0.1","root","181219","db1",0,NULL,0);  //连接数据库
-
-    if(conn == NULL)
-    {
-        printf("mysql_real_connect failed!!!\n");
-        exit(1);
-    }
-
-
-}
-*/
