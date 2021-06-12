@@ -14,15 +14,90 @@
 typedef struct denn{
 	int ice;
 	int id;
-	char name[10];
-	char password[6];
+	char name[20];
+	char password[16];
+	char qu[200];
+	char an[100];
+	char yhlb[20];
 }DENN;
 
+typedef struct liaot{
+	int ice;
+	int id;
+	char beizhu[20];
+    char xinxi[200];
+}LIAOT;
 
-int main()
+void C_denn(DENN *XX, int socket_fd)
 {
-    int n;
-	DENN *XX = (DENN*)malloc(sizeof(DENN));
+	int I;
+	char P[16],buf[50];
+	do
+	{
+		printf("ID:");
+		scanf("%d",&I);
+		printf("Password:");
+		scanf("%s",P);
+		XX->id = I;
+		strncpy(XX->password, P, 16);
+		//printf("id = %d,password = %s\n",XX->id,XX->password);
+		send(socket_fd, XX, sizeof(DENN),0);
+		read(socket_fd,buf, sizeof(buf));
+		printf("%s\n",buf);
+	}while(strcmp(buf,"登陆成功") != 0);
+}
+
+void C_zhuce(DENN *XX, int socket_fd)
+{
+	int I;
+	char P[16],buf[50],name[20],qu[200],an[100];
+	do
+	{
+		printf("ID:");
+		scanf("%d",&I);
+		printf("Password:");
+		scanf("%s",P);
+		printf("Name: ");
+		scanf("%s",name);
+		printf("请设置密保问题：");
+		scanf("%s",qu);
+		printf("请输入答案：");
+		scanf("%s",an);
+		XX->id = I;
+		strncpy(XX->password, P, sizeof(P));
+		strncpy(XX->name, name, sizeof(name));
+		strncpy(XX->qu, qu, sizeof(qu));
+		strncpy(XX->an, an, sizeof(an));
+		strncpy(XX->yhlb, name, sizeof(name));          //好友列表，以name为mysql—table名
+		send(socket_fd, XX, sizeof(DENN),0);
+		read(socket_fd,buf, sizeof(buf));
+		printf("%s\n",buf);
+	}while (strcmp(buf,"注册成功") != 0);
+}
+
+void C_zhaohui(DENN *XX, int socket_fd)
+{
+	int I;
+	char an[100],qu[200],buf[50];
+	do
+	{
+		printf("请输入你的id：");
+		scanf("%d",&I);
+		XX->id = I;
+		send(socket_fd, XX, sizeof(DENN),0);      //将ID发送到服务器
+		read(socket_fd, qu, sizeof(qu));          //读取密保问题
+		printf("%s\n", qu);
+		scanf("%s",an);                           //回答问题
+		strncpy(XX->an, an, sizeof(an));
+		send(socket_fd, XX, sizeof(DENN),0);       //将答案发送到服务端
+		read(socket_fd, buf, sizeof(buf));
+		printf("%s\n", buf);
+	}while(strcmp(buf, "答案错误") == 0);
+}
+
+void face(DENN *XX)
+{
+	int n;
 	while(1)	
     {
 		printf("/*******************************/\n");
@@ -43,6 +118,12 @@ int main()
 		}
 	}
 	XX->ice = n;         //选择功能
+}
+
+int main()
+{
+	DENN *XX = (DENN*)malloc(sizeof(DENN));
+	//face(XX);
 
 	int port = atoi("9999");      //从命令行获取端口号
 	if( port<1025 || port>65535 )       //0~1024一般给系统使用，一共可以分配到65535
@@ -68,65 +149,61 @@ int main()
 	{
 		perror("connect failed!\n");
 	}
-	else
+	do
 	{
-		printf("connect server successful!\n");
-	}
- 
-	//要监视的描述符集合
-	fd_set fds;
-	
-	//3 send msg
-	while(1)
+		face(XX);
+		if(XX->ice == 1)             //登陆
+		{
+			C_denn(XX, socket_fd);
+			break;
+		}
+		else if(XX->ice == 2)        //注册
+		{
+			C_zhuce(XX, socket_fd);
+			//face(XX);
+		} 
+		else if(XX->ice == 3)       //找回密码
+		{
+			C_zhaohui(XX, socket_fd);
+		
+			//face(XX);
+		}
+	}while(1);
+
+	int ic;
+	LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+	printf("***********************************\n");
+	printf("**************1 添加好友************\n");
+	scanf("%d", &ic);
+	XZ->ice = ic;    //选择的功能
+	do
 	{
-		FD_ZERO(&fds);                  //清空文件描述符集合
-		
-		FD_SET(0,&fds);                 //把标准输入设备加入到集合中 
-		
-		FD_SET(socket_fd,&fds);         //把网络通信文件描述符加入到集合中 
-		
-		ret = select(socket_fd+1,&fds,NULL,NULL,NULL);
-		if(ret < 0)//错误
+		if (ic == 0)
 		{
-			perror("select fail:");
-			return -1;
+			send(socket_fd, XZ, sizeof(LIAOT),0);
 		}
-		else if(ret > 0) //有活跃的
+		else if(ic == 1)      //添加好友
 		{
-			//判断是否 标准输入设备活跃 假设是则发送数据
-			if(FD_ISSET(0,&fds))
-			{
-				char buf[1024] = {0};
-				scanf("%s",buf);
-				write(socket_fd,buf,strlen(buf));
-				if(strcmp(buf, "exit") == 0)
-				{
-					break;
-				}
-			}
- 
-			//判断是否有收到数据
-			if(FD_ISSET(socket_fd,&fds))
-			{
-				char buf[1024]={0};
-				read(socket_fd,buf,sizeof(buf));
-				printf("receive msg:%s\n",buf);
-				if(strcmp(buf, "exit") == 0 || strcmp(buf, "") == 0)
-				{
-					break;
-				}
- 
- 
-			}
- 
- 
+			int I;
+			char B[20];
+			printf("请输入好友ID:");
+			scanf("%d", &I);
+			printf("请输入备注:");
+			scanf("%s", B);
+			XZ->id = I;               //好友ID
+			strncpy(XZ->beizhu, B, sizeof(B));          //备注名
+			send(socket_fd, XZ, sizeof(LIAOT),0);
 		}
+	} while (1);
 	
-	}
- 
+
 	//4 关闭通信socket
 	close(socket_fd);
  
+	do{
+
+	}while(1);
+	
 	return 0;
 }
  
