@@ -19,6 +19,7 @@ MYSQL *conn;
 typedef struct denn{
 	int ice;
 	int id;
+    int zt;
 	char name[20];
 	char password[16];
     char qu[200];
@@ -35,9 +36,9 @@ typedef struct liaot{
 
 #define OPEN_MAX 1024
 
-void denglu(DENN *XX,int sfd)            //登陆
+int  denglu(DENN *XX,int sfd)            //登陆
 {
-    int row, res;
+    int row, res, ret;
     char A[100],B[50];
     sprintf(A, "select id from student where id = %d", XX->id);
     MYSQL_RES *res_ptr;
@@ -50,6 +51,7 @@ void denglu(DENN *XX,int sfd)            //登陆
     {
         //id错误
         strncpy(B,"无此id",50);
+        ret = 0;
     }
     else
     {
@@ -61,19 +63,25 @@ void denglu(DENN *XX,int sfd)            //登陆
         {
         //password错误
             strncpy(B,"密码错误",50);
+            ret = 0;
         }
         else
         {
+            sprintf(A, "update student set zt=1 where id = %d", XX->id);        //在线状态
+            mysql_query(conn, A);
             strncpy(B,"登陆成功",50);
+            ret = 1;
         }
         mysql_free_result(res_ptr);
     }
     write(sfd, B, sizeof(B));
+
+    return ret;
 }
 
-void zhuce(DENN *XX,int sfd)        //注册
+int zhuce(DENN *XX,int sfd)        //注册
 {
-    int res;
+    int res, ret;
     char A[100],B[50];
     sprintf(A, "select id from student where id = %d", XX->id);
     MYSQL_RES *res_ptr;
@@ -85,24 +93,28 @@ void zhuce(DENN *XX,int sfd)        //注册
     if(res_row)
     {
         //id已经存在
+        ret = 0;
         strncpy(B,"id已经被注册，请更换一个id",50);
     }
     else
     {
-        sprintf(A, "insert into student (id,password,name,qu,an,yhlb) values (%d, '%s', '%s', '%s', '%s', '%s')",XX->id, XX->password,XX->name,XX->qu,XX->an, XX->yhlb);
+        sprintf(A, "insert into student (id,password,name,qu,an,yhlb,zt) values (%d, '%s', '%s', '%s', '%s', '%s', 0)",XX->id, XX->password,XX->name,XX->qu,XX->an, XX->yhlb);
         int res = mysql_query(conn,A);
         strncpy(B,"注册成功",50);
+        ret = 1;
 
-        sprintf(A, "create table '%s' (id int, beizhu varchar(20), jl varchar(20))", XX->yhlb);
+        sprintf(A, "create table %s (id int, beizhu varchar(20), jl varchar(20))", XX->yhlb);
         mysql_query(conn,A);           //创建好友列表
     }
     //printf("A\n");
     write(sfd, B, sizeof(B));
+
+    return ret;
 }
 
-void zhaohui(DENN *XX,int sfd)
+int zhaohui(DENN *XX,int sfd)
 {
-    int res, field;
+    int res, field, ret;
     char A[200],B[50],C[100];
     sprintf(A, "select qu from student where id = %d", XX->id);
     MYSQL_RES *res_ptr;
@@ -117,7 +129,7 @@ void zhaohui(DENN *XX,int sfd)
     write(sfd, A, sizeof(A));               //将密保问题发送到客户端
     mysql_free_result(res_ptr);
     recv(sfd, XX, sizeof(DENN),0);          //接收到客户端的答案
-    sprintf(A,"select an from student where id = %d AND an = '%s'",XX->id, XX->an);
+    sprintf(A,"select an from student where id = %d AND an = %s",XX->id, XX->an);
     //printf("%d\t%s\n",XX->id,XX->an);
     mysql_query(conn, A);
     res_ptr = mysql_store_result(conn);
@@ -127,25 +139,29 @@ void zhaohui(DENN *XX,int sfd)
     if(row == NULL)
     {
         strncpy(B,"答案错误",50);
+        ret = 0;
     }
     else
     {
-        sprintf(A, "select password from student where an = '%s'", XX->an);
+        sprintf(A, "select password from student where an = %s", XX->an);
         res = mysql_query(conn,A);
         res_ptr = mysql_store_result(conn);
         res_row = mysql_fetch_row(res_ptr);
         field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
         sprintf(B,"密码为：%s",res_row[0]);
         mysql_free_result(res_ptr);
+        ret = 1;
     }
     write(sfd, B, sizeof(B));        //将密码发送到客户端
+
+    return ret;
 }
 
 
 void liaotian(DENN *XX, LIAOT *XZ,int sfd)
 {
     char A[100], B[50], BUF[1024];
-    if(XZ->ice == 0)       //查看所以好友
+    if(XZ->ice == 0)       //查看所有好友
     {
         int field;
         sprintf(A, "select * from %s", XX->yhlb);
@@ -194,6 +210,7 @@ void liaotian(DENN *XX, LIAOT *XZ,int sfd)
 
 int main()
 {
+    char A[100];
     DENN *XX = (DENN*)malloc(sizeof(DENN));
 
     conn = mysql_init(conn);    //初始化一个句柄
@@ -212,6 +229,9 @@ int main()
         printf("mysql_real_connect failed!!!\n");
         exit(1);
     }
+
+    sprintf(A, "update student set zt=0");      //服务器重启，所有用户都不在线
+    mysql_query(conn,A);
 
 	int cfd, lfd, sfd, ret, n, i, maxi, efd, nready;
 	struct sockaddr_in caddr, saddr;
@@ -268,31 +288,46 @@ int main()
                 if(n == 0)         //客户端关闭
                 {
                     ret = epoll_ctl(efd, EPOLL_CTL_DEL, sfd, NULL);    //将套接字sfd从等待队列中删除
+                    
+                    sprintf(A, "update student set zt = 0 where id = %d", XX->id);
+                    mysql_query(conn,A);        //用户退出，将状态设置为不在线
+
                     close(sfd);        //关闭该套接字
                 }
                 else
                 {
-                    switch(XX->ice)
+                    int i = XX->ice, ret;
+                    do
                     {
-                        case 1:       //登陆
+                        ret = 0;
+                        if(i == 1)       //登陆
+                        {
+                            ret = denglu(XX, sfd);
+                            if(ret == 1)
                             {
-                                denglu(XX, sfd);
                                 break;
                             }
-                        case 2:      //注册
+                            else
                             {
-                                zhuce(XX, sfd);
-                                break;
+                                recv(sfd, XX, sizeof(DENN),0);
+                                i = XX->ice;
                             }
-                        case 3:      //找回密码
-                            { 
-                                zhaohui(XX, sfd);
-                                break;
-                            }
-                    }
+                        }
+                        if(i == 2)      //注册
+                        {
+                            ret = zhuce(XX, sfd);
+                            recv(sfd, XX, sizeof(DENN),0);
+                            i = XX->ice;
+                        }
+                        if(i == 3)      //找回密码
+                        { 
+                            ret = zhaohui(XX, sfd);
+                            recv(sfd, XX, sizeof(DENN),0);
+                            i = XX->ice;
+                        }
+                    }while(1);
                     
                     //获取name
-                    char A[100];
                     MYSQL_RES *res_ptr;
                     MYSQL_ROW  res_row;
                     sprintf(A, "select name from student where id = %d", XX->id);
@@ -301,7 +336,13 @@ int main()
                     res_row = mysql_fetch_row(res_ptr);
                     //printf("%s\n", res_row[0]);
                     strncpy(XX->name, res_row[0], sizeof(XX->name));   
-                    strncpy(XX->yhlb, res_row[0], sizeof(XX->yhlb));   //yhlb与name相同
+                    mysql_free_result(res_ptr);
+                    //获取yhlb
+                    sprintf(A, "select yhlb from student where id = %d", XX->id);
+                    mysql_query(conn,A);
+                    res_ptr = mysql_store_result(conn);
+                    res_row = mysql_fetch_row(res_ptr);
+                    strncpy(XX->yhlb, res_row[0], sizeof(XX->yhlb));
                     mysql_free_result(res_ptr);
 
                     LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
