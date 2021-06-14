@@ -14,6 +14,7 @@
 typedef struct denn{
 	int ice;
 	int id;
+	int zt;
 	char name[20];
 	char password[16];
 	char qu[200];
@@ -39,6 +40,7 @@ void C_denn(DENN *XX, int socket_fd)
 		printf("Password:");
 		scanf("%s",P);
 		XX->id = I;
+		XX->zt = 1;
 		strncpy(XX->password, P, 16);
 		//printf("id = %d,password = %s\n",XX->id,XX->password);
 		send(socket_fd, XX, sizeof(DENN),0);
@@ -50,7 +52,7 @@ void C_denn(DENN *XX, int socket_fd)
 void C_zhuce(DENN *XX, int socket_fd)
 {
 	int I;
-	char P[16],buf[50],name[20],qu[200],an[100];
+	char P[16],buf[50],name[20],qu[200],an[100],hylb[20];
 	do
 	{
 		printf("ID:");
@@ -64,11 +66,12 @@ void C_zhuce(DENN *XX, int socket_fd)
 		printf("请输入答案：");
 		scanf("%s",an);
 		XX->id = I;
+		sprintf(hylb, "%shylb", name);
 		strncpy(XX->password, P, sizeof(P));
 		strncpy(XX->name, name, sizeof(name));
 		strncpy(XX->qu, qu, sizeof(qu));
 		strncpy(XX->an, an, sizeof(an));
-		strncpy(XX->yhlb, name, sizeof(name));          //好友列表，以name为mysql—table名
+		strncpy(XX->yhlb, hylb, sizeof(hylb));          //好友列表，以name为mysql—table名
 		send(socket_fd, XX, sizeof(DENN),0);
 		read(socket_fd,buf, sizeof(buf));
 		printf("%s\n",buf);
