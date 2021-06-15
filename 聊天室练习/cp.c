@@ -14,6 +14,7 @@
 typedef struct denn{
 	int ice;
 	int id;
+	int zt;
 	char name[20];
 	char password[16];
 	char qu[200];
@@ -39,6 +40,7 @@ void C_denn(DENN *XX, int socket_fd)
 		printf("Password:");
 		scanf("%s",P);
 		XX->id = I;
+		XX->zt = 1;
 		strncpy(XX->password, P, 16);
 		//printf("id = %d,password = %s\n",XX->id,XX->password);
 		send(socket_fd, XX, sizeof(DENN),0);
@@ -50,7 +52,7 @@ void C_denn(DENN *XX, int socket_fd)
 void C_zhuce(DENN *XX, int socket_fd)
 {
 	int I;
-	char P[16],buf[50],name[20],qu[200],an[100];
+	char P[16],buf[50],name[20],qu[200],an[100],hylb[20];
 	do
 	{
 		printf("ID:");
@@ -64,11 +66,12 @@ void C_zhuce(DENN *XX, int socket_fd)
 		printf("请输入答案：");
 		scanf("%s",an);
 		XX->id = I;
+		sprintf(hylb, "%shylb", name);
 		strncpy(XX->password, P, sizeof(P));
 		strncpy(XX->name, name, sizeof(name));
 		strncpy(XX->qu, qu, sizeof(qu));
 		strncpy(XX->an, an, sizeof(an));
-		strncpy(XX->yhlb, name, sizeof(name));          //好友列表，以name为mysql—table名
+		strncpy(XX->yhlb, hylb, sizeof(hylb));          //好友列表，以name为mysql—table名
 		send(socket_fd, XX, sizeof(DENN),0);
 		read(socket_fd,buf, sizeof(buf));
 		printf("%s\n",buf);
@@ -113,7 +116,6 @@ void face(DENN *XX)
 		}
 		if(n > 0 && n <= 3)
 		{
-
 			break;
 		}
 	}
@@ -123,6 +125,7 @@ void face(DENN *XX)
 int main()
 {
 	DENN *XX = (DENN*)malloc(sizeof(DENN));
+	char buf[50];
 	//face(XX);
 
 	int port = atoi("9999");      //从命令行获取端口号
@@ -151,6 +154,8 @@ int main()
 	}
 	do
 	{
+		sprintf(buf, "1");
+		send(socket_fd, buf, sizeof(buf),0);
 		face(XX);
 		if(XX->ice == 1)             //登陆
 		{
@@ -170,17 +175,27 @@ int main()
 		}
 	}while(1);
 
-	int ic;
-	LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-	printf("***********************************\n");
-	printf("**************1 添加好友************\n");
-	scanf("%d", &ic);
-	XZ->ice = ic;    //选择的功能
+	
 	do
 	{
-		if (ic == 0)
+		int ic;
+		LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+		printf("***********************************\n");
+		printf("************0 查看好友列表***********\n");
+		printf("**************1 添加好友************\n");
+		printf("请输入要选择的功能：");
+		scanf("%d", &ic);
+		XZ->ice = ic;    //选择的功能
+		
+		if (ic == 0)      //查看好友列表
 		{
 			send(socket_fd, XZ, sizeof(LIAOT),0);
+			do
+			{
+				read(socket_fd,buf, sizeof(buf));
+				printf("%s\n",buf);
+
+			} while (strcmp(buf, "over") != 0);
 		}
 		else if(ic == 1)      //添加好友
 		{
@@ -193,6 +208,13 @@ int main()
 			XZ->id = I;               //好友ID
 			strncpy(XZ->beizhu, B, sizeof(B));          //备注名
 			send(socket_fd, XZ, sizeof(LIAOT),0);
+
+			read(socket_fd, buf, sizeof(buf));
+			printf("%s\n",buf);
+		}
+		else
+		{
+			printf("无此功能请重新选择!!!!!!!!!!!!\n");
 		}
 	} while (1);
 	
