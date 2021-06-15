@@ -154,6 +154,8 @@ int main()
 	}
 	do
 	{
+		sprintf(buf, "1");
+		send(socket_fd, buf, sizeof(buf),0);
 		face(XX);
 		if(XX->ice == 1)             //登陆
 		{
