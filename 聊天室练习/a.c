@@ -233,9 +233,9 @@ int main()
     sprintf(A, "update student set zt=0");      //服务器重启，所有用户都不在线
     mysql_query(conn,A);
 
-	int cfd, lfd, sfd, ret, n, i, maxi, efd, nready;
+	int cfd, lfd, sfd, ret, n, i, maxi, efd, nready, PD;
 	struct sockaddr_in caddr, saddr;
-	char buf[BUFSIZ], str[INET_ADDRSTRLEN];           //缓存区
+	char buf[50], str[INET_ADDRSTRLEN];           //缓存区
 	socklen_t clen;
 
 	bzero(&saddr, sizeof(saddr));
@@ -282,7 +282,9 @@ int main()
             {
                 sfd = ep[i].data.fd;
                 //n = read(sfd, buf, sizeof(buf));         //读取套接字内容
-                n = recv(sfd, XX, sizeof(DENN),0);
+                n = recv(sfd, buf, sizeof(buf), 0);
+                //printf("%s\n",buf);
+                //n = recv(sfd, XX, sizeof(DENN),0);
                 //printf("%d\n",XX->ice);
                 //printf("id = %d,password = %s\n",XX->id,XX->password);//无限循环
                 if(n == 0)         //客户端关闭
@@ -296,58 +298,66 @@ int main()
                 }
                 else
                 {
-                    int i = XX->ice, ret;
-                    do
+                    if(strcmp(buf, "1") == 0)
                     {
-                        ret = 0;
-                        if(i == 1)       //登陆
+                        recv(sfd, XX, sizeof(DENN),0);
+                        int i = XX->ice, ret;
+                        do
                         {
-                            ret = denglu(XX, sfd);
-                            if(ret == 1)
+                            ret = 0;
+                            if(i == 1)       //登陆
                             {
-                                break;
+                                ret = denglu(XX, sfd);
+                                if(ret == 1)
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    recv(sfd, XX, sizeof(DENN),0);
+                                    i = XX->ice;
+                                }
                             }
-                            else
+                            if(i == 2)      //注册
                             {
+                                ret = zhuce(XX, sfd);
                                 recv(sfd, XX, sizeof(DENN),0);
                                 i = XX->ice;
                             }
-                        }
-                        if(i == 2)      //注册
-                        {
-                            ret = zhuce(XX, sfd);
-                            recv(sfd, XX, sizeof(DENN),0);
-                            i = XX->ice;
-                        }
-                        if(i == 3)      //找回密码
-                        { 
-                            ret = zhaohui(XX, sfd);
-                            recv(sfd, XX, sizeof(DENN),0);
-                            i = XX->ice;
-                        }
-                    }while(1);
+                            if(i == 3)      //找回密码
+                            { 
+                                ret = zhaohui(XX, sfd);
+                                recv(sfd, XX, sizeof(DENN),0);
+                                i = XX->ice;
+                            }
+                        }while(1);
                     
-                    //获取name
-                    MYSQL_RES *res_ptr;
-                    MYSQL_ROW  res_row;
-                    sprintf(A, "select name from student where id = %d", XX->id);
-                    mysql_query(conn,A);
-                    res_ptr = mysql_store_result(conn);
-                    res_row = mysql_fetch_row(res_ptr);
-                    //printf("%s\n", res_row[0]);
-                    strncpy(XX->name, res_row[0], sizeof(XX->name));   
-                    mysql_free_result(res_ptr);
-                    //获取yhlb
-                    sprintf(A, "select yhlb from student where id = %d", XX->id);
-                    mysql_query(conn,A);
-                    res_ptr = mysql_store_result(conn);
-                    res_row = mysql_fetch_row(res_ptr);
-                    strncpy(XX->yhlb, res_row[0], sizeof(XX->yhlb));
-                    mysql_free_result(res_ptr);
+                        //获取name
+                        MYSQL_RES *res_ptr;
+                        MYSQL_ROW  res_row;
+                        sprintf(A, "select name from student where id = %d", XX->id);
+                        mysql_query(conn,A);
+                        res_ptr = mysql_store_result(conn);
+                        res_row = mysql_fetch_row(res_ptr);
+                        //printf("%s\n", res_row[0]);
+                        strncpy(XX->name, res_row[0], sizeof(XX->name));   
+                        mysql_free_result(res_ptr);
+                        //获取yhlb
+                        sprintf(A, "select yhlb from student where id = %d", XX->id);
+                        mysql_query(conn,A);
+                        res_ptr = mysql_store_result(conn);
+                        res_row = mysql_fetch_row(res_ptr);
+                        strncpy(XX->yhlb, res_row[0], sizeof(XX->yhlb));
+                        mysql_free_result(res_ptr);
 
-                    LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-                    recv(sfd, XZ, sizeof(LIAOT), 0);       //接受到客户端信息，判断客户端需要的功能
-                    liaotian(XX, XZ, sfd);
+                        LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+                        recv(sfd, XZ, sizeof(LIAOT), 0);       //接受到客户端信息，判断客户端需要的功能
+                        liaotian(XX, XZ, sfd);
+                    }
+                    else if(strcmp(buf, "2") == 0)
+                    {
+                        
+                    }
                 }
             }
         }
