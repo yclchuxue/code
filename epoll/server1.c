@@ -59,7 +59,7 @@ int main()
             {
                 sfd = ep[i].data.fd;
                 n = read(sfd, buf, sizeof(buf));         //读取套接字内容
-                if(n == 0)         //内容已经读完
+                if(n == 0)         //客户端关闭
                 {
                     ret = epoll_ctl(efd, EPOLL_CTL_DEL, sfd, NULL);    //将套接字sfd从等待队列中删除
                     close(sfd);        //关闭该套接字
@@ -69,6 +69,7 @@ int main()
                     for(int j = 0; j < n; j++)
 						buf[j] = toupper(buf[j]);      //大小写转换
 					write(STDOUT_FILENO, buf, n);      //把buf写到标准输出中,即打印出来
+                    printf("AAA\n");
 					write(sfd, buf, n);      //向sfd套接字发送信息
                 }
             }
