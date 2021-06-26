@@ -17,28 +17,28 @@
 MYSQL *conn;
 
 typedef struct xinxi{
-	int ice;              //
-	int id;
-	char buf[1024];
+	int ice;              //功能选择
+	int id;               //id
+	char buf[1024];       //信息传递
 }XINXI;
 
 typedef struct denn{
-	int ice;
-	int id;
-    int zt;
-	char name[20];
-	char password[16];
-    char qu[200];
-    char an[100];
-    char yhlb[20];
+	int ice;               //功能选择
+	int id;                //ID
+    int zt;                //状态
+	char name[20];         //网名
+	char password[16];     //密码
+    char qu[200];          //密保问题
+    char an[100];          //答案      
+    char hylb[20];         //好友列表
 }DENN;
 
 typedef struct liaot{
-	int ice;
-	int id;
-    int zt;
-    char beizhu[20];
-    char xinxi[200];
+	int ice;                //功能选择
+	int id;                 //id
+    int zt;                 //状态
+    char beizhu[20];        //备注
+    char xinxi[200];        //信息
 }LIAOT;
 
 #define OPEN_MAX 1024
@@ -51,8 +51,13 @@ int zhaohui(DENN *XX,int sfd);     //找回密码
 
 void liaotian(DENN *XX, LIAOT *XZ,int sfd);
 
-int xuznzhe(DENN *XX, LIAOT *XZ, int sfd);
+int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd);
 
+int xuanzhe_2(DENN *XX, LIAOT *XZ, int sfd);
+
+int panduan_1();                  //判断客户是否空闲
+
+int panduan_2();
 
 int main()
 {
@@ -195,7 +200,7 @@ int main()
                         mysql_query(conn,A);
                         res_ptr = mysql_store_result(conn);
                         res_row = mysql_fetch_row(res_ptr);
-                        strncpy(XX->yhlb, res_row[0], sizeof(XX->yhlb));
+                        strncpy(XX->hylb, res_row[0], sizeof(XX->hylb));
                         mysql_free_result(res_ptr);
 
                         //LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
@@ -205,7 +210,12 @@ int main()
                     else if(YY.ice == 2)
                     {
                         recv(sfd, XZ, sizeof(LIAOT), 0);
-                        xuanzhe(XX, XZ, sfd);
+                        xuanzhe_1(XX, XZ, sfd);
+                    }
+                    else if(YY.ice == 3)
+                    {
+                        recv(sfd, XZ, sizeof(LIAOT), 0);
+                        xuanzhe_2(XX, XZ, sfd);
                     }
                 }
             }
@@ -215,7 +225,7 @@ int main()
     return 0;
 }
 
-int xuznzhe(DENN *XX, LIAOT *XZ, int sfd)
+int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
 {
     if(XZ->ice == 1)
     {
@@ -225,7 +235,7 @@ int xuznzhe(DENN *XX, LIAOT *XZ, int sfd)
     {
         int field;
         char B[50], A[100];
-        sprintf(A, "select * from %s", XX->yhlb);
+        sprintf(A, "select * from %s", XX->hylb);
         int res = mysql_query(conn,A);
         if(res)
         {
@@ -263,7 +273,8 @@ int xuznzhe(DENN *XX, LIAOT *XZ, int sfd)
         }
         res_ptr = mysql_store_result(conn);
         field = mysql_num_fields(res_ptr);
-        XZ->zt = res_row[0];
+        //XZ->zt = res_row[0];
+        //strncpy(XZ->zt, res_row[0], sizeof(int));
         send(sfd, XZ, sizeof(LIAOT), 0);
         mysql_free_result(res_ptr);
     }
@@ -273,7 +284,7 @@ int xuznzhe(DENN *XX, LIAOT *XZ, int sfd)
         char A[100];
         MYSQL_RES *res_ptr;
         MYSQL_ROW  res_row;
-        sprintf(A, "select * from %s", XX->yhlb);             //此处需要更改，×××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××8
+        sprintf(A, "select * from %s", XX->hylb);             //此处需要更改，×××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××8
         int res = mysql_query(conn,A);
         if(res)
         {
@@ -283,11 +294,32 @@ int xuznzhe(DENN *XX, LIAOT *XZ, int sfd)
         field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
         
     }
-    else if(XZ->ice == 5)
+    else if(XZ->ice == 5)              //屏蔽好友信息
     {
 
     }
     
+    return 0;
+}
+
+int xuanzhe_2(DENN *XX, LIAOT *XZ, int sfd)
+{
+    if(XZ->ice == 1)
+    {
+
+    }
+    else if(XZ->ice == 2)
+    {
+        
+    }
+    else if(XZ->ice == 3)
+    {
+        
+    }
+    else if(XZ->ice == 4)
+    {
+
+    }
     
 }
 
@@ -353,13 +385,25 @@ int zhuce(DENN *XX,int sfd)        //注册
     }
     else
     {
-        sprintf(A, "insert into student (id,password,name,qu,an,yhlb,zt) values (%d, '%s', '%s', '%s', '%s', '%s', 0)",XX->id, XX->password,XX->name,XX->qu,XX->an, XX->yhlb);
-        int res = mysql_query(conn,A);
-        strncpy(B,"注册成功",50);
-        ret = 1;
-
-        sprintf(A, "create table %s (id int, beizhu varchar(20), jl varchar(20))", XX->yhlb);
-        mysql_query(conn,A);           //创建好友列表
+        sprintf(A, "select id from student where id = %d and name = %s", XX->id, XX->name);
+        res = mysql_query(conn,A);
+        res_ptr = mysql_store_result(conn);
+        res_row = mysql_fetch_row(res_ptr);
+        mysql_free_result(res_ptr);
+        if(res_row)                      //name已存在
+        {
+            ret = 0;
+            strncpy(B, "name已经被注册，请更换一个name", 50);
+        }
+        else
+        {
+            sprintf(A, "insert into student (id,password,name,qu,an,hylb,zt) values (%d, '%s', '%s', '%s', '%s', '%s', 0)",XX->id, XX->password,XX->name,XX->qu,XX->an, XX->hylb);
+            int res = mysql_query(conn,A);
+            strncpy(B,"注册成功",50);
+            ret = 1;
+            sprintf(A, "create table %s (id int, beizhu varchar(20), jl varchar(20))", XX->hylb);
+            mysql_query(conn,A);           //创建好友列表
+        }  
     }
     //printf("A\n");
     write(sfd, B, sizeof(B));
@@ -419,7 +463,7 @@ void liaotian(DENN *XX, LIAOT *XZ,int sfd)
     if(XZ->ice == 0)       //查看所有好友
     {
         int field;
-        sprintf(A, "select * from %s", XX->yhlb);
+        sprintf(A, "select * from %s", XX->hylb);
         int res = mysql_query(conn,A);
         if(res)
         {
