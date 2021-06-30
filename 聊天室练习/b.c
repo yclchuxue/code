@@ -77,11 +77,10 @@ int main()
 		perror("connect failed!\n");
 	}
 
-
+	YY.ice = 1;
+	send(socket_fd, &YY, sizeof(YY), 0);
 	do
 	{
-		YY.ice = 1;
-		send(socket_fd, &YY, sizeof(YY), 0);
 		face(XX);
 		if(XX->ice == 1)             //登陆
 		{

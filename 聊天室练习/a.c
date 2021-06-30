@@ -184,7 +184,9 @@ int main()
                                 i = XX->ice;
                             }
                         }while(1);
-                    
+
+                        //printf("YYY\n");
+
                         //获取name
                         MYSQL_RES *res_ptr;
                         MYSQL_ROW  res_row;
@@ -192,23 +194,29 @@ int main()
                         mysql_query(conn,A);
                         res_ptr = mysql_store_result(conn);
                         res_row = mysql_fetch_row(res_ptr);
-                        //printf("%s\n", res_row[0]);
-                        strncpy(XX->name, res_row[0], sizeof(XX->name));   
+                        //printf("name: %s\n", res_row[0]);
+                        strncpy(XX->name, res_row[0], sizeof(XX->name)); 
+                        //printf("JJJ\n");  
                         mysql_free_result(res_ptr);
                         //获取yhlb
-                        sprintf(A, "select yhlb from student where id = %d", XX->id);
+                        sprintf(A, "select hylb from student where id = %d", XX->id);
                         mysql_query(conn,A);
                         res_ptr = mysql_store_result(conn);
                         res_row = mysql_fetch_row(res_ptr);
+                        //printf("BBB\n");
+                        //printf("hylb: %s\n", res_row[0]);
                         strncpy(XX->hylb, res_row[0], sizeof(XX->hylb));
                         mysql_free_result(res_ptr);
 
                         //LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
                         //recv(sfd, XZ, sizeof(LIAOT), 0);       //接受到客户端信息，判断客户端需要的功能
                         //liaotian(XX, XZ, sfd);
+
+                        //printf("AA\n");
                     }
                     else if(YY.ice == 2)
                     {
+                        printf("BB\n");
                         recv(sfd, XZ, sizeof(LIAOT), 0);
                         xuanzhe_1(XX, XZ, sfd);
                     }
@@ -342,7 +350,7 @@ int  denglu(DENN *XX,int sfd)            //登陆
     }
     else
     {
-        sprintf(A, "select id from student where id = %d and password = %s", XX->id, XX->password);
+        sprintf(A, "select id from student where id = %d and password = '%s'", XX->id, XX->password);
         res = mysql_query(conn,A);
         res_ptr = mysql_store_result(conn);
         res_row = mysql_fetch_row(res_ptr);                   
@@ -385,7 +393,7 @@ int zhuce(DENN *XX,int sfd)        //注册
     }
     else
     {
-        sprintf(A, "select id from student where id = %d and name = %s", XX->id, XX->name);
+        sprintf(A, "select id from student where id = %d and name = '%s'", XX->id, XX->name);
         res = mysql_query(conn,A);
         res_ptr = mysql_store_result(conn);
         res_row = mysql_fetch_row(res_ptr);
@@ -428,12 +436,14 @@ int zhaohui(DENN *XX,int sfd)
     write(sfd, A, sizeof(A));               //将密保问题发送到客户端
     mysql_free_result(res_ptr);
     recv(sfd, XX, sizeof(DENN),0);          //接收到客户端的答案
-    sprintf(A,"select an from student where id = %d AND an = %s",XX->id, XX->an);
+    sprintf(A,"select an from student where id = %d and an = '%s'",XX->id, XX->an);
     //printf("%d\t%s\n",XX->id,XX->an);
     mysql_query(conn, A);
     res_ptr = mysql_store_result(conn);
     MYSQL_ROW row = mysql_fetch_row(res_ptr);
     mysql_free_result(res_ptr);
+    
+    //printf("%s\n", row[0]);
 
     if(row == NULL)
     {
@@ -442,7 +452,7 @@ int zhaohui(DENN *XX,int sfd)
     }
     else
     {
-        sprintf(A, "select password from student where an = %s", XX->an);
+        sprintf(A, "select password from student where an = '%s'", XX->an);
         res = mysql_query(conn,A);
         res_ptr = mysql_store_result(conn);
         res_row = mysql_fetch_row(res_ptr);
