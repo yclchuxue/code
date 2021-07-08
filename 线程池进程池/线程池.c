@@ -174,12 +174,12 @@ void* thread_routine (void *arg)
 void* myprocess (void *arg)
 {
     printf ("threadid is 0x%x, working on task %d\n", pthread_self (),*(int *) arg);
-    sleep (1);/*休息一秒，延长任务的执行时间*/
+    //sleep (1);/*休息一秒，延长任务的执行时间*/
     return NULL;
 }
 int main ()
 {
-    pool_init (3);/*线程池中最多三个活动线程*/
+    pool_init(3);/*线程池中最多三个活动线程*/
 
     /*连续向池中投入10个任务*/
     int *workingnum = (int *) malloc (sizeof (int) * 10);
@@ -188,7 +188,7 @@ int main ()
     for (i = 0; i < 10; i++)
     {
         workingnum[i] = i;
-        pool_add_worker (myprocess, &workingnum[i]);
+        pool_add_worker (myprocess, &workingnum[i]);       //myprocess为测试函数，及工作函数
     }
     /*等待所有任务完成*/
     sleep (5);
