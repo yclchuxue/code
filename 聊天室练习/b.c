@@ -10,10 +10,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <pthread.h>
 
 typedef struct xinxi{
 	int ice;              //功能选择
 	int id;               //客户id
+	char beizhu[20];      //备注	
 	char buf[1024];       //信息内容
 }XINXI;
 
@@ -37,6 +39,8 @@ typedef struct liaot{
     char xinxi[200];
 }LIAOT;
 
+int Socket_fd;
+
 void C_denn(DENN *XX, int socket_fd);
 
 void C_zhuce(DENN *XX, int socket_fd);
@@ -48,6 +52,8 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd);
 void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd);
 
 int C_TongZ(XINXI *YY, DENN *XX, int socket_fd);
+
+void *thread(void *arg);
 
 void face(DENN *XX);
 
@@ -83,6 +89,8 @@ int main()
 	{
 		perror("connect failed!\n");
 	}
+
+	Socket_fd = socket_fd;
 
 	do{          //*******************************************************************************
 
@@ -144,10 +152,10 @@ int main()
 			}
 			else if(ice == 3)
 			{
-				YY.ice = = 3;
+				YY.ice = 4;
 				YY.id = XX->id;
 				int ret  = send(socket_fd, &YY, sizeof(YY),0);
-				Chaoyo(&YY, XX, socket_fd);
+				C_haoyouliaot(&YY, XX, socket_fd);
 			}
 			else if(ice == 4)
 			{
@@ -155,7 +163,7 @@ int main()
 			}
 			else if(ice == 5)
 			{
-				YY.ice = 5;
+				YY.ice = 6;
 				YY.id  = XX->id;
 				//printf("%d\n", YY.ice);
 				int ret = send(socket_fd, &YY, sizeof(YY), 0);
@@ -369,7 +377,7 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 						printf("请输入好友备注：");
 						scanf("%s", beizhu);
 						strncpy(XZ->beizhu, beizhu, sizeof(beizhu));
-						ret = send(send(socket_fd, XZ, sizeof(LIAOT), 0));
+						ret = send(socket_fd, XZ, sizeof(LIAOT), 0);
 						ret = read(socket_fd, buf, sizeof(buf));
 						printf("%s",buf);
 					}
@@ -397,12 +405,13 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 		{
 			XZ->ice = ic;
 			send(socket_fd, XZ, sizeof(LIAOT),0);
-			//printf("")
 			do
 			{
 				read(socket_fd,buf, sizeof(buf));
-				printf("%s\n",buf);
-
+				if(strcmp(buf,"over") != 0)
+				{
+					printf("%s\n",buf);
+				}
 			} while (strcmp(buf, "over") != 0);
 		}
 		else if(ic == 3)        //查看好友状态
@@ -417,11 +426,11 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 			{
 				printf("该好友在线！\n");
 			}
-			else
+			else if(XZ->zt == 0)
 			{
 				printf("该好友不在线!\n");
 			}
-			if(XZ->zt == -1)
+			else if(XZ->zt == -1)
 			{
 				printf("你无此ID的好友！\n");
 			}
@@ -432,22 +441,22 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 			scanf("%d", &id);
 			XZ->id = id;
 			XZ->ice = ic;
-			send(socket_fd, XX, sizeof(DENN),0);
+			send(socket_fd, XZ, sizeof(LIAOT), 0);
 			do
 			{
-				recv(socket_fd,XZ, sizeof(LIAOT), 0);
-				if(strcmp(XZ->xinxi, "over") != 0)
+				recv(socket_fd,YY, sizeof(XINXI), 0);
+				if(strcmp(YY->buf, "over") != 0)
 				{
-					if(XZ->id == id)
+					if(YY->id == id)
 					{
-						printf("%s: %s\n", XZ->beizhu, XZ->xinxi);
+						printf("%s : %s\n", YY->beizhu, YY->buf);
 					}
 					else
 					{
-						printf("自己：%s\n", XZ->xinxi);
+						printf("MINE ：%s\n", YY->buf);
 					}
 				}
-			} while (strcmp(XZ->xinxi, "over") != 0);
+			} while (strcmp(YY->buf, "over") != 0);
 		}
 		else if(ic == 5)        //屏蔽好友消息
 		{
@@ -503,10 +512,25 @@ void C_denn(DENN *XX, int socket_fd)
 	}while(strcmp(buf,"登陆成功") != 0);
 }
 
+void *thread(void *arg)
+{
+	XINXI *YY = (XINXI *)malloc(sizeof(XINXI));
+	while(1)
+	{
+		YY->ice = 666;
+		YY->id = atoi(arg);
+		send(Socket_fd, YY, sizeof(XINXI), 0);
+		sleep(1);                                   //没隔一秒向服务端确定有无信息发来
+	}
+
+	free(YY);
+}
+
 void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
 {
+	pthread_t thid;
 	int id,ret,ic;
-	char beizhu[20];
+	char beizhu[20],buf[50];
 	do
 	{
 		LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
@@ -527,51 +551,72 @@ void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
 			scanf("%d",&id);
 			XZ->id = id;
 			send(socket_fd,XZ, sizeof(LIAOT), 0);
+			read(socket_fd,buf, sizeof(buf));
+			if(strcmp(buf, "OK") != 0)
+			{
+				printf("%s",buf);
+				continue;
+			}
+
+			long I = (long)id;
+
+			if(pthread_create(&thid, NULL, thread, (void*)I) != 0)
+			{
+				//创建失败
+				return ;
+			}
 
 			do{
 
-			//要监视的描述符集合
-			fd_set fds;
-			FD_ZERO(&fds);                  //清空文件描述符集合
+				//要监视的描述符集合
+				fd_set fds;
+				FD_ZERO(&fds);                  //清空文件描述符集合
 		
-			FD_SET(0,&fds);                 //把标准输入设备加入到集合中 
+				FD_SET(0,&fds);                 //把标准输入设备加入到集合中 
 		
-			FD_SET(socket_fd,&fds);         //把网络通信文件描述符加入到集合中 
+				FD_SET(socket_fd,&fds);         //把网络通信文件描述符加入到集合中 
 
-			ret = select(socket_fd+1,&fds,NULL,NULL,NULL);
-		 	if(ret < 0)//错误
-			{
-				perror("select fail:");
-				return -1;
-			}
-			else if(ret > 0) //有活跃的
-			{
-				//判断是否 标准输入设备活跃 假设是则发送数据
-				if(FD_ISSET(0,&fds))
+				ret = select(socket_fd+1,&fds,NULL,NULL,NULL);
+		 		if(ret < 0)//错误
 				{
-					char buf[1024] = {0};
-					scanf("%s",buf);
-					strncpy(YY->buf, buf, sizeof(YY->buf));
-					XZ->ice = 777;
-					XZ->id = id;
-					send(socket_fd, YY, sizeof(YY), 0);
-
-					if(strcmp(buf, "exit") == 0)
+					perror("select fail:");
+					return ;
+				}
+				else if(ret > 0) //有活跃的
+				{
+					//判断是否 标准输入设备活跃 假设是则发送数据
+					if(FD_ISSET(0,&fds))
 					{
-						break;
+						char buf[1024] = {0};
+						scanf("%s",buf);
+						strncpy(YY->buf, buf, sizeof(YY->buf));
+						YY->ice = 777;
+						YY->id = id;
+						ret = send(socket_fd, YY, sizeof(YY), 0);
+						if(ret)
+						{
+							printf("MINE : %s\n", buf);
+						}
+
+						if(strcmp(buf, "exit") == 0)
+						{
+							YY->ice = 4;
+							YY->id = XX->id;
+							send(socket_fd, YY, sizeof(XINXI), 0);  //结束循环
+							pthread_join(thid, NULL);   //销毁线程
+							break;
+						}
+					}
+ 
+					//判断是否有收到数据
+					if(FD_ISSET(socket_fd,&fds))
+					{
+						char buf[1024]={0};
+						//read(socket_fd,buf,sizeof(buf));
+						recv(socket_fd, YY, sizeof(XINXI), 0);
+						printf("%s : %s\n", YY->beizhu, YY->buf);
 					}
 				}
- 
-				//判断是否有收到数据
-				if(FD_ISSET(socket_fd,&fds))
-				{
-					char buf[1024]={0};
-					//read(socket_fd,buf,sizeof(buf));
-					recv(socket_fd, YY, sizeof(XINXI), 0);
-				}
-			}
-			}
-
 			}while(1);
 		}
 
