@@ -53,6 +53,7 @@ MYSQL *conn;
 typedef struct xinxi{
 	int ice;              //功能选择
 	int id;               //id
+    char beizhu[20];      //备注
 	char buf[1024];       //信息传递
 }XINXI;
 
@@ -92,6 +93,10 @@ int xuanzhe_2(DENN *XX, LIAOT *XZ, int sfd);
 
 int TongZ(XINXI *YY, int sfd);    //添加好友通知
 
+void HY_get(XINXI *YY, int id, int sfd);         //epoll收发信息
+
+void HY_send(int s_id,int e_id, int sfd);                       //将未读信息发送给客户端
+
 int set_1(int id);
 
 int drop_1(int id);
@@ -100,211 +105,8 @@ int panduan_1(int id);                  //判断客户是否空闲
 
 int panduan_2(int id);
 
-int pool_add_worker (void *(*process) (void *arg), void *arg);
-void *thread_routine (void *arg);
-
-static CThread_pool *pool = NULL;       //线程池结构指针
-
-void pool_init (int max_thread_num)
-{
-    pool = (CThread_pool *) malloc (sizeof (CThread_pool));    //分配空间
-    pthread_mutex_init (&(pool->queue_lock), NULL);    //锁
-    pthread_cond_init (&(pool->queue_ready), NULL);    //条件变量
-    pool->queue_head = NULL;             //线程链表
-    pool->max_thread_num = max_thread_num;  //线程池中允许的活动线程数目（由main函数传入）
-    pool->cur_queue_size = 0;          //当前等待队列的任务数目
-    pool->shutdown = 0;        //是否销毁线程池
-    pool->threadid =(pthread_t *) malloc (max_thread_num * sizeof (pthread_t));  //线程名
-        
-    int i = 0;
-    for (i = 0; i < max_thread_num; i++)     //创建线程
-    { 
-        pthread_create (&(pool->threadid[i]), NULL, thread_routine,
-                NULL);
-    }
-}
-
-/*向线程池中加入任务*/
-int pool_add_worker (void *(*process) (void *arg), void *arg)
-{
-    /*构造一个新任务*/
-    CThread_worker *newworker =
-        (CThread_worker *) malloc (sizeof (CThread_worker));
-    newworker->process = process;       //设置回调函数到myprocess函数
-    newworker->arg = arg;
-    newworker->next = NULL;/*别忘置空*/
-    pthread_mutex_lock (&(pool->queue_lock));      
-    /*将任务加入到等待队列中*/
-    CThread_worker *member = pool->queue_head;
-    if (member != NULL)
-    {
-        while (member->next != NULL)
-            member = member->next;
-        member->next = newworker;
-    }
-    else
-    {
-        pool->queue_head = newworker;
-    }
-
-    assert (pool->queue_head != NULL);
-    pool->cur_queue_size++;
-    pthread_mutex_unlock (&(pool->queue_lock));
-    /*好了，等待队列中有任务了，唤醒一个等待线程；
-    注意如果所有线程都在忙碌，这句没有任何作用*/
-    pthread_cond_signal (&(pool->queue_ready));
-    return 0;
-}
-
-/*销毁线程池，等待队列中的任务不会再被执行，但是正在运行的线程会一直
-把任务运行完后再退出*/
-int pool_destroy ()
-{
-    if (pool->shutdown)
-        return -1;/*防止两次调用*/
-    pool->shutdown = 1;
-    /*唤醒所有等待线程，线程池要销毁了*/
-    pthread_cond_broadcast (&(pool->queue_ready));
-    /*阻塞等待线程退出，否则就成僵尸了*/
-    int i;
-    for (i = 0; i < pool->max_thread_num; i++)
-        pthread_join (pool->threadid[i], NULL);
-    free (pool->threadid);
-    /*销毁等待队列*/
-    CThread_worker *head = NULL;
-    while (pool->queue_head != NULL)
-    {
-        head = pool->queue_head;
-        pool->queue_head = pool->queue_head->next;
-        free (head);
-    }
-    /*条件变量和互斥量也别忘了销毁*/
-    pthread_mutex_destroy(&(pool->queue_lock));
-    pthread_cond_destroy(&(pool->queue_ready));
-
-    free (pool);
-    /*销毁后指针置空是个好习惯*/
-    pool=NULL;
-    return 0;
-}
-
-void* thread_routine (void *arg)
-{
-    
-    
-    //printf ("starting thread 0x%x\n", pthread_self ());
-    while (1)
-    {
-        pthread_mutex_lock (&(pool->queue_lock));
-        /*如果等待队列为0并且不销毁线程池，则处于阻塞状态; 注意
-        pthread_cond_wait是一个原子操作，等待前会解锁，唤醒后会加锁*/
-        while (pool->cur_queue_size == 0 && !pool->shutdown)
-        {
-            //printf ("thread 0x%x is waiting\n", pthread_self ());
-            pthread_cond_wait (&(pool->queue_ready), &(pool->queue_lock));
-        }
-
-        /*线程池要销毁了*/
-        if (pool->shutdown)
-        {
-            /*遇到break,continue,return等跳转语句，千万不要忘记先解锁*/
-            pthread_mutex_unlock (&(pool->queue_lock));
-            printf ("thread 0x%x will exit\n", pthread_self ());
-            pthread_exit (NULL);
-        }
-
-        printf ("thread 0x%x is starting to work\n", pthread_self ());
-        /*assert是调试的好帮手*/
-        assert (pool->cur_queue_size != 0);
-        assert (pool->queue_head != NULL);
-
-        /*等待队列长度减去1，并取出链表中的头元素*/
-        pool->cur_queue_size--;
-        CThread_worker *worker = pool->queue_head;
-        pool->queue_head = worker->next;
-        pthread_mutex_unlock (&(pool->queue_lock));   //解锁
-        /*调用回调函数，执行任务*/
-        (*(worker->process)) (worker->arg);
-        free (worker);
-        worker = NULL;
-    }
-    /*这一句应该是不可达的*/
-    pthread_exit (NULL);
-}
-
-void* myprocess_1(void *arg)
-{
-    LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-    DENN *XX = (DENN*)malloc(sizeof(DENN));
-    char A[100];
-
-    recv(*(int *) arg, XZ, sizeof(LIAOT), 0);
-
-    XX->id = XZ->id;
-    //获取name
-    MYSQL_RES *res_ptr;
-    MYSQL_ROW  res_row;
-    sprintf(A, "select name from student where id = %d", XX->id);
-    mysql_query(conn,A);
-    res_ptr = mysql_store_result(conn);
-    res_row = mysql_fetch_row(res_ptr);
-    //printf("%s\n", res_row[0]);
-    strncpy(XX->name, res_row[0], sizeof(XX->name));   
-    mysql_free_result(res_ptr);
-    //获取yhlb
-    sprintf(A, "select hylb from student where id = %d", XX->id);
-    mysql_query(conn,A);
-    res_ptr = mysql_store_result(conn);
-    res_row = mysql_fetch_row(res_ptr);
-    strncpy(XX->hylb, res_row[0], sizeof(XX->hylb));
-    mysql_free_result(res_ptr);
-
-    xuanzhe_1(XX, XZ, *(int *) arg);
-
-    return NULL;
-}
-
-void* myprocess_2(void *arg)
-{
-    LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-    DENN *XX = (DENN*)malloc(sizeof(DENN));
-    char A[100];
-
-    recv(*(int *) arg, XZ, sizeof(LIAOT), 0);
-
-    XX->id = XZ->id;
-    //获取name
-    MYSQL_RES *res_ptr;
-    MYSQL_ROW  res_row;
-    sprintf(A, "select name from student where id = %d", XX->id);
-    mysql_query(conn,A);
-    res_ptr = mysql_store_result(conn);
-    res_row = mysql_fetch_row(res_ptr);
-    //printf("%s\n", res_row[0]);
-    strncpy(XX->name, res_row[0], sizeof(XX->name));   
-    mysql_free_result(res_ptr);
-    //获取yhlb
-    sprintf(A, "select hylb from student where id = %d", XX->id);
-    mysql_query(conn,A);
-    res_ptr = mysql_store_result(conn);
-    res_row = mysql_fetch_row(res_ptr);
-    strncpy(XX->hylb, res_row[0], sizeof(XX->hylb));
-    mysql_free_result(res_ptr);
-    
-
-    xuanzhe_2(XX, XZ, *(int *) arg);
-
-    return NULL;
-}
-
-
-
-
 int main()
 {
-    pool_init(3);/*线程池中最多三个活动线程*/
-
-
     char A[100];
     DENN *XX = (DENN*)malloc(sizeof(DENN));
     LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
@@ -459,18 +261,18 @@ int main()
                         //printf("AAA\n");
                         memset(&YY, 0, sizeof(XINXI));
                     }
-                    else if(YY.ice == 2)
+                    else if(YY.ice == 2)             //好友管理
                     {
                         //printf("BBB\n");
                         //recv(sfd, XZ, sizeof(LIAOT), 0);
                         xuanzhe_1(XX, XZ, sfd);
                     }
-                    else if(YY.ice == 3)
+                    else if(YY.ice == 3)             //聊天群管理
                     {
                         if(panduan_1(YY.id) == 0)
                         {
                             set_1(YY.id);
-                            pool_add_worker(myprocess_2, &sfd);       //myprocess为测试函数，及工作函数
+                            //pool_add_worker(myprocess_2, &sfd);       //myprocess为测试函数，及工作函数
                             drop_1(YY.id);
                         }
                         else            //将请求写入消息盒子
@@ -478,13 +280,25 @@ int main()
 
                         }
                     }
-                    else if(YY.ice == 4)
+                    else if(YY.ice == 4)       //好友聊天
+                    {
+                        xuanzhe_2(XX, XZ, sfd);
+                    }
+                    else if(YY.ice == 5)       //群聊天
                     {
 
                     }
-                    else if(YY.ice == 5)
+                    else if(YY.ice == 6)
                     {
                         TongZ(&YY, sfd);
+                    }
+                    else if(YY.ice == 666)
+                    {
+                        HY_send(YY.id,XX->id,sfd);
+                    }
+                    else if(YY.ice == 777)
+                    {
+                        HY_get(&YY, XX->id, sfd);
                     }
                 }
             }
@@ -493,7 +307,6 @@ int main()
 
     //printf("BBB\n");
 
-    pool_destroy();
     close(lfd);
     return 0;
 }
@@ -551,8 +364,25 @@ int getid_from_beizhu(int id,char *beizhu)
     {
         return 0;
     }
-
 }
+
+char *getbeizhu_from_id(int m_id,int id)
+{
+    char A[100];//beizhu[20];
+    int ret;
+    sprintf(A, "select beizhu from %shylb where id = %d", getname_from_id(m_id), id);
+    ret = mysql_query(conn,A);
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    mysql_free_result(res_ptr);
+    if(res_row != NULL)
+    {
+        return res_row[0];
+    }
+}
+
 
 int TongZ(XINXI *YY, int sfd)
 {
@@ -778,9 +608,6 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
 {   
     int ret;
     char buf[50],A[100];
-    //printf("ID = %d\n", XX->id);
-    //printf("size = %d\n", sizeof(LIAOT));
-    //printf("%d\n", XZ->ice);
     
     do{                                                      //****************************
 
@@ -884,7 +711,7 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
                         }
                         mysql_free_result(res_ptr);
                     }
-                    recv(sfd, XZ, sizeof(LIAOT),0)
+                    recv(sfd, XZ, sizeof(LIAOT),0);
                 } while (1);   
             }
         }
@@ -892,7 +719,7 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
         {
             int field;
             char B[50], A[100];
-            sprintf(A, "select * from %s", XX->hylb);
+            sprintf(A, "select * from %shylb", getname_from_id(XX->id));
             int res = mysql_query(conn,A);
             if(res)
             {
@@ -902,16 +729,23 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
             MYSQL_ROW  res_row;
             res_ptr = mysql_store_result(conn);
             field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+            //printf("field = %d\n", field);
+            memset(B, 0, sizeof(B));
             while(res_row=mysql_fetch_row(res_ptr) )
 	        {
-		        for(int i=0;i<field;i++)
+		        for(int i=0;i<2;i++)
     		    {
-    	    		strcat(B, res_row[i]);
-                    strcat(B, "\t");
-		        }
+                    if(i != 2)
+                    {
+                        //printf("%s\n", res_row[i]);
+    	    		    strncat(B, res_row[i],strlen(res_row[i]));
+                        strcat(B, "\t");
+                    }
+                }
     		    write(sfd, B, sizeof(B));
                 memset(B, 0, sizeof(B));
 	        }
+            //printf("CCC\n");
             sprintf(B, "over");
             write(sfd, B, sizeof(B));
             mysql_free_result(res_ptr);
@@ -930,10 +764,23 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
             }
             res_ptr = mysql_store_result(conn);
             field = mysql_num_fields(res_ptr);
-            //XZ->zt = res_row[0];
-            //strncpy(XZ->zt, res_row[0], sizeof(int));
-            send(sfd, XZ, sizeof(LIAOT), 0);
+            res_row=mysql_fetch_row(res_ptr);
+            if(res_row != NULL)
+            {
+                XZ->zt = atoi(res_row[0]);
+            }
             mysql_free_result(res_ptr);
+            sprintf(A, "select * from %shylb where id = %d", getname_from_id(XX->id), XZ->id);
+            ret = mysql_query(conn,A);
+            res_ptr = mysql_store_result(conn);
+            res_row = mysql_fetch_row(res_ptr);
+            if(res_row == NULL)
+            {
+                XZ->zt = -1;            //没有此ID的好友
+            }
+            mysql_free_result(res_ptr);
+            
+            send(sfd, XZ, sizeof(LIAOT), 0);
         }
         else if(XZ->ice == 4)             //查看聊天记录
         {
@@ -941,7 +788,8 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
             char A[100];
             MYSQL_RES *res_ptr;
             MYSQL_ROW  res_row;
-            sprintf(A, "select * from %s", XX->hylb);             //此处需要更改，×××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××8
+            XINXI *YY = (XINXI*)malloc(sizeof(XINXI));
+            sprintf(A, "select * from %s", getjl_from_id(XX->id, XZ->id));             //此处需要更改，×××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××××8
             int res = mysql_query(conn,A);
             if(res)
             {
@@ -949,7 +797,21 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
             }
             res_ptr = mysql_store_result(conn);
             field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+            while(res_row=mysql_fetch_row(res_ptr))
+            {
+                for(int i = 0;i<field;i++)
+                {
+                    if(i == 0)
+                        strncpy(YY->beizhu, getbeizhu_from_id(XX->id,atoi(res_row[i])),sizeof(YY->beizhu));
+                    if(i == 1)
+                        strncpy(YY->buf, res_row[i], sizeof(YY->buf));
+                }
+                send(sfd, YY, sizeof(XINXI), 0);
+            }
+            sprintf(YY->buf, "over");
+            send(sfd, YY, sizeof(XINXI), 0);
             mysql_free_result(res_ptr);
+            free(YY);
         }
         else if(XZ->ice == 5)              //屏蔽好友信息
         {
@@ -988,25 +850,87 @@ int xuanzhe_1(DENN *XX, LIAOT *XZ, int sfd)
     return 0;
 }
 
+void TJ_haoyou(int id,int sfd)       //获取未浏览信息数量
+{
+
+}
+
+void HY_send(int s_id,int e_id,int sfd)                       //将未读信息发送给客户端
+{
+    int ret;
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    XINXI *YY = (XINXI*)malloc(sizeof(XINXI));
+    char A[100],B[50],beizhu[20];
+    sprintf(A, "select xinxi from %s where end_id = %d and zt = 1", getjl_from_id(s_id,e_id), e_id);
+    ret = mysql_query(conn,A);
+    res_ptr = mysql_store_result(conn);
+    while(res_row = mysql_fetch_row(res_ptr))
+    {
+        strncpy(YY->beizhu, getbeizhu_from_id(e_id,s_id), sizeof(YY->beizhu));
+        strncpy(YY->buf, res_row[0], sizeof(YY->buf));
+        send(sfd, YY, sizeof(XINXI), 0);
+    }
+
+    free(YY);
+}
+
+void HY_get(XINXI *YY, int id, int sfd)
+{
+    char A[100];//B[50],buf[50],beizhu[20];
+    int ret;//,field,zt;   
+    sprintf(A, "insert into %s (from_id, xinxi, end_id, zt) values (%d, '%s', %d, 1)", getjl_from_id(id,YY->id), id, YY->buf, YY->id);
+    ret = mysql_query(conn,A);
+    if(ret)
+    {
+
+    }
+
+    //mysql_free_result(res_ptr);
+}
+
 int xuanzhe_2(DENN *XX, LIAOT *XZ, int sfd)
 {
-    if(XZ->ice == 1)
-    {
+    int id, ret;
+    char buf[50], A[100];
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    //获取未浏览信息数量
+    TJ_haoyou(XX->id, sfd);
 
-    }
-    else if(XZ->ice == 2)
+    ret = recv(sfd, XZ, sizeof(LIAOT), 0);
+    do
     {
-        
-    }
-    else if(XZ->ice == 3)
-    {
-        
-    }
-    else if(XZ->ice == 4)
-    {
-
-    }
-    
+        if(XZ->ice == 0)
+        {
+            break;
+        }
+        else if(XZ->ice == 1)
+        {
+            //判断是否存在该好友
+            sprintf(A, "select * from %shylb where id = %d", getname_from_id(XX->id), XZ->id);
+            ret = mysql_query(conn,A);
+            if(!ret)
+            {
+                res_ptr = mysql_store_result(conn);
+                res_row = mysql_fetch_row(res_ptr);
+                if(res_row != NULL)         //存在该好友
+                {
+                    sprintf(buf, "OK");
+                    write(sfd, buf, sizeof(buf));
+                    HY_send(XZ->id, XX->id,sfd);
+                    return 0;                 //回到epoll，让epoll来随时接受信息
+                }
+                else                        //不存在该好友
+                {
+                    sprintf(buf, "不存在该好友!\n");
+                    write(sfd, buf, sizeof(buf));
+                }
+                mysql_free_result(res_ptr);
+            }
+        }
+        recv(sfd, XZ, sizeof(LIAOT), 0);
+    }while(1);
 }
 
 int  denglu(DENN *XX,int sfd)            //登陆
