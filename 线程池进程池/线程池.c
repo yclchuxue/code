@@ -59,8 +59,7 @@ void pool_init (int max_thread_num)
     int i = 0;
     for (i = 0; i < max_thread_num; i++)     //创建线程
     { 
-        pthread_create (&(pool->threadid[i]), NULL, thread_routine,
-                NULL);
+        pthread_create (&(pool->threadid[i]), NULL, thread_routine, NULL);
     }
 }
 
@@ -90,7 +89,7 @@ int pool_add_worker (void *(*process) (void *arg), void *arg)
     assert (pool->queue_head != NULL);
     pool->cur_queue_size++;
     pthread_mutex_unlock (&(pool->queue_lock));
-    /*好了，等待队列中有任务了，唤醒一个等待线程；
+    /*等待队列中有任务了，唤醒一个等待线程；
     注意如果所有线程都在忙碌，这句没有任何作用*/
     pthread_cond_signal (&(pool->queue_ready));
     return 0;
@@ -142,7 +141,7 @@ void* thread_routine (void *arg)
             pthread_cond_wait (&(pool->queue_ready), &(pool->queue_lock));
         }
 
-        /*线程池要销毁了*/
+        /*线程池销毁*/
         if (pool->shutdown)
         {
             /*遇到break,continue,return等跳转语句，千万不要忘记先解锁*/
