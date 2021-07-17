@@ -67,8 +67,7 @@ void pool_init (int max_thread_num)
 int pool_add_worker (void *(*process) (void *arg), void *arg)
 {
     /*构造一个新任务*/
-    CThread_worker *newworker =
-        (CThread_worker *) malloc (sizeof (CThread_worker));
+    CThread_worker *newworker =(CThread_worker *) malloc (sizeof (CThread_worker));
     newworker->process = process;       //设置回调函数到myprocess函数
     newworker->arg = arg;
     newworker->next = NULL;/*别忘置空*/
