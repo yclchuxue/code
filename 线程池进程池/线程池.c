@@ -137,7 +137,9 @@ void* thread_routine (void *arg)
         while (pool->cur_queue_size == 0 && !pool->shutdown)
         {
             printf ("thread 0x%x is waiting\n", pthread_self ());
-            pthread_cond_wait (&(pool->queue_ready), &(pool->queue_lock));
+            // lock status = lock
+            pthread_cond_wait (&(pool->queue_ready), &(pool->queue_lock)); // lock status = unlock
+            // lock status = lock
         }
 
         /*线程池销毁*/
@@ -150,7 +152,7 @@ void* thread_routine (void *arg)
         }
 
         printf ("thread 0x%x is starting to work\n", pthread_self ());
-        /*assert是调试的好帮手*/
+        /*assert是调试*/
         assert (pool->cur_queue_size != 0);
         assert (pool->queue_head != NULL);
 
