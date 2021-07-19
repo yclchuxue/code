@@ -26,6 +26,7 @@ typedef struct xinxi{
     int ice_4;
 	int m_id;               //客户id
 	int y_id;               //好友id
+	int q_id;              //群id
 	int zt;                //状态
 	char name[20];         //name
 	char password[16];     //密码
@@ -33,6 +34,7 @@ typedef struct xinxi{
 	char an[100];          //答案
 	char beizhu[20];      //备注	
     char hylb[20];         //好友列表
+    char cylb[20];         //成员列表
     char jl[20];           //聊天记录
 	char buf[200];       //信息内容
 }XINXI;
@@ -52,6 +54,9 @@ typedef struct liaot{
 	int ice;
 	int id;
 	int zt;
+    char name[20];
+	char qu[200];
+	char an[100];
 	char buf[50];
 	char beizhu[20];
     char xinxi[200];
@@ -72,9 +77,13 @@ int zhaohui_1(XINXI *YY,int sfd);     //找回密码
 
 void liaotian(DENN *XX, LIAOT *XZ,int sfd);
 
-int xuanzhe_1(DENN *XX, XINXI *YY, int sfd);
+int xuanzhe_1(DENN *XX, XINXI *YY, int sfd);    //好友管理
 
-int xuanzhe_2(DENN *XX, XINXI *YY, int sfd);
+int xuanzhe_2(DENN *XX, XINXI *YY, int sfd);    //好友聊天
+
+int group_1(DENN *XX, XINXI *YY, int sfd);      //群管理
+
+int group_2(DENN *XX, XINXI *YY, int sfd);      //群聊天
 
 int TongZ(XINXI *YY, int sfd);    //添加好友通知
 
@@ -244,7 +253,7 @@ int main()
                     }
                     else if(YY.ice_1 == 3)             //聊天群管理
                     {
-
+                        group_1(XX,&YY, sfd);
                     }
                     else if(YY.ice_1 == 4 && YY.ice_4 == 0)       //好友聊天
                     {
@@ -254,7 +263,7 @@ int main()
                     {
 
                     }
-                    else if(YY.ice_1 == 6)
+                    else if(YY.ice_1 == 6)      //查看通知
                     {
                         YY.m_id = XX->id;
                         TongZ(&YY, sfd);
@@ -372,6 +381,276 @@ char *getbeizhu_from_id(int m_id,int id)
     return beizhu;
 }
 
+char *getgroupname_from_id(int id)
+{
+    char A[100], *name = (char *) malloc(sizeof(char)*20);
+    int ret;
+    sprintf(A, "select name from allgroup where id = %d", id);
+    ret = mysql_query(conn,A);
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    if(res_row != NULL)
+    {
+        strncpy(name, res_row[0], sizeof(name));
+    }
+    mysql_free_result(res_ptr);
+
+    return name;
+}
+
+char *getgroupjl_from_id(int id)
+{
+    char A[100], *jl = (char *) malloc(sizeof(char)*20);
+    int ret;
+    sprintf(A, "select jl from allgroup where id = %d", id);
+    ret = mysql_query(conn,A);
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    if(res_row != NULL)
+    {
+        strncpy(jl, res_row[0], sizeof(jl));
+    }
+    mysql_free_result(res_ptr);
+
+    return jl;
+}
+
+int group_1(DENN *XX, XINXI *YY, int sfd)      //群管理
+{
+    char A[100],B[50],name[20],ch;
+    int ret, id, ret_1, ret_2, ret_3, field;
+    LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+    if(YY->ice_2 == 31)                        //群的创建与解散
+    {
+        if(YY->ice_3 == 311)          //群的创建
+        {
+            if(YY->zt == 1)        //需要管理员同意或无要求
+            {
+                sprintf(A, "select * from allgroup where id = %d", YY->q_id);
+                ret = mysql_query(conn,A);
+                MYSQL_RES *res_ptr;
+                MYSQL_ROW  res_row;
+                res_ptr = mysql_store_result(conn);
+                res_row = mysql_fetch_row(res_ptr);
+                mysql_free_result(res_ptr);
+                if(res_row != NULL)     //该ID已存在
+                {
+                    sprintf(XZ->buf, "该ID已存在，请更换！");
+                }
+                else
+                {
+                    sprintf(A, "select * from allgroup where name = %s", YY->name);
+                    ret = mysql_query(conn,A);
+                    MYSQL_RES *res_ptr;
+                    MYSQL_ROW  res_row;
+                    res_ptr = mysql_store_result(conn);
+                    res_row = mysql_fetch_row(res_ptr);
+                    mysql_free_result(res_ptr);
+                    if(res_row != NULL)   //该name已存在
+                    {
+                        sprintf(XZ->buf, "该name已存在，请更换！");
+                    }
+                    else
+                    {
+                        sprintf(A, "insert into allgroup (id, name, cylb, jl, qu, an, zt) values (%d, '%s', '%scylb', '%sjl', NULL, NULL, %d)", YY->q_id, YY->name, YY->name, YY->name, YY->zt);
+                        ret = mysql_query(conn,A);
+                        if(ret == 0)
+                        {
+                            sprintf(XZ->buf, "创建成功！！！");
+                        }
+                    }
+                }
+                //mysql_free_result(res_ptr);
+                send(sfd, XZ, sizeof(LIAOT), 0);
+            }
+            else if(YY->zt == 2)   //需要回答问题
+            {
+                sprintf(A, "select * from allgroup where id = %d", YY->q_id);
+                ret = mysql_query(conn,A);
+                MYSQL_RES *res_ptr;
+                MYSQL_ROW  res_row;
+                res_ptr = mysql_store_result(conn);
+                res_row = mysql_fetch_row(res_ptr);
+                mysql_free_result(res_ptr);
+                if(res_row != NULL)     //该ID已存在
+                {
+                    sprintf(XZ->buf, "该ID已存在，请更换！");
+                }
+                else
+                {
+                    sprintf(A, "select * from allgroup where name = %s", YY->name);
+                    ret = mysql_query(conn,A);
+                    MYSQL_RES *res_ptr;
+                    MYSQL_ROW  res_row;
+                    res_ptr = mysql_store_result(conn);
+                    res_row = mysql_fetch_row(res_ptr);
+                    mysql_free_result(res_ptr);
+                    if(res_row != NULL)   //该name已存在
+                    {
+                        sprintf(XZ->buf, "该name已存在，请更换！");
+                    }
+                    else
+                    {
+                        sprintf(A, "insert into allgroup (id, name, cylb, jl, qu, an, zt) values (%d, '%s', '%scylb', '%sjl', '%s', '%s', %d)", YY->q_id, YY->name, YY->name, YY->name, YY->qu, YY->an, YY->zt);
+                        ret = mysql_query(conn,A);
+                        if(ret == 0)
+                        {
+                            sprintf(XZ->buf, "创建成功！！！");
+                        }
+                    }
+                }
+                //mysql_free_result(res_ptr);
+                send(sfd, XZ, sizeof(LIAOT), 0);
+            }
+        }
+        else if(YY->ice_3 == 312)        //群的解散
+        {
+            sprintf(A, "select * from allgroup where id = %d", YY->q_id);
+            ret = mysql_query(conn,A);
+            ret = mysql_query(conn,A);
+            MYSQL_RES *res_ptr;
+            MYSQL_ROW  res_row;
+            res_ptr = mysql_store_result(conn);
+            res_row = mysql_fetch_row(res_ptr);
+            mysql_free_result(res_ptr);
+            if(res_row != NULL)
+            {
+                sprintf(A, "select name from allgroup where id = %d", YY->q_id);
+                ret = mysql_query(conn,A);
+                MYSQL_RES *res_ptr;
+                MYSQL_ROW  res_row;
+                res_ptr = mysql_store_result(conn);
+                res_row = mysql_fetch_row(res_ptr);
+                strncpy(name, res_row[0], sizeof(name));
+                mysql_free_result(res_ptr);
+
+                sprintf(A, "delete * from allgroup where id = %d", YY->q_id);
+                ret_1 = mysql_query(conn,A);
+                sprintf(A, "drop table %scylb", name);
+                ret_2 = mysql_query(conn,A);
+                sprintf(A, "drop table %sjl", name);
+                ret_3 = mysql_query(conn,A);
+                if(ret_1 == 0 && ret_2 == 0 && ret_3 == 0)
+                {
+                    sprintf(XZ->buf, "解散成功！！!");
+                }
+            }
+            else
+            {
+                sprintf(YY->buf, "该群ID不存在！");
+            }
+            send(sfd, XZ, sizeof(LIAOT), 0);
+        }
+
+    }
+    else if(YY->ice_2 == 32)                   //申请加群退群*
+    {
+        if(YY->ice_3 == 321)       //加群
+        {
+            sprintf(A, "select * from allgroup where id = %d", YY->q_id);
+            ret = mysql_query(conn,A);
+            ret = mysql_query(conn,A);
+            MYSQL_RES *res_ptr;
+            MYSQL_ROW  res_row;
+            res_ptr = mysql_store_result(conn);
+            res_row = mysql_fetch_row(res_ptr);
+            strncpy(name, res_row[0], sizeof(name));
+            mysql_free_result(res_ptr);
+            if(res_row != NULL)
+            {
+                sprintf(A, "insert into box ()");
+            }
+            else
+            {
+                sprintf(XZ->buf, "无此ID的群！！！");
+            }
+        }
+        else if(YY->ice_3 == 322)    //退群
+        {
+            sprintf(A, "select * from %sgrouptable where id = %d", getname_from_id(YY->m_id),YY->q_id);
+            ret = mysql_query(conn,A);
+            MYSQL_RES *res_ptr;
+            MYSQL_ROW  res_row;
+            res_ptr = mysql_store_result(conn);
+            res_row = mysql_fetch_row(res_ptr);
+            mysql_free_result(res_ptr);
+            if(res_row != NULL)
+            {
+                sprintf(A, "delete * from %sgrouptable where id = %d", getname_from_id(YY->m_id), YY->q_id);
+                ret = mysql_query(conn,A);         //从已加列表中删除
+                sprintf(A, "delete from %scylb where id = %d", getgroupname_from_id(YY->q_id), YY->m_id);
+                ret = mysql_query(conn,A);         //从群成员列表中删除
+            }
+            else
+            {
+                sprintf(XZ->buf, "你没有加入此群！！！");
+            }
+        }
+    }
+    else if(YY->ice_2 == 33)                   //查看已加群和群成员
+    {
+        if(YY->ice_3 == 331)          //查看已加群
+        {
+            sprintf(A, "select * from %sgrouptable", getname_from_id(YY->m_id));
+            ret = mysql_query(conn,A);
+            MYSQL_RES *res_ptr;
+            MYSQL_ROW  res_row;
+            res_ptr = mysql_store_result(conn);
+            field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+            while(res_row = mysql_fetch_row(res_ptr))
+            {
+                memset(B, 0, sizeof(B));
+                for(int i = 0; i < field; i++)
+                {
+                    strcat(B, res_row[i]);
+                }
+                send(sfd, B, sizeof(B), 0);
+            }
+            sprintf(B, "over");
+            send(sfd, B, sizeof(B), 0);
+            mysql_free_result(res_ptr);
+        }
+        else if(YY->ice_3 == 332)     //查看群成员
+        {
+            sprintf(A, "select * from allgroup where id = %d", YY->q_id);
+            ret = mysql_query(conn,A);
+            if(ret == 0)
+            {
+                sprintf(A, "select * from %scylb", getgroupname_from_id(YY->q_id));
+                ret = mysql_query(conn,A);
+                MYSQL_RES *res_ptr;
+                MYSQL_ROW  res_row;
+                res_ptr = mysql_store_result(conn);
+                field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
+                while(res_row = mysql_fetch_row(res_ptr))
+                {
+                    for(int i=0;i<field;i++)
+                    {
+                        
+                    }
+                }
+            }
+        }
+    }
+    else if(YY->ice_2 == 34)                   //查看聊天记录
+    {
+
+    }
+    else if(YY->ice_2 == 35)                    //设置管理员
+    {
+
+    }
+    else if(YY->ice_2 == 36)                   //踢人
+    {
+
+    }
+
+    free(XZ);
+}
 
 int TongZ(XINXI *YY, int sfd)
 {
@@ -855,6 +1134,8 @@ int xuanzhe_1(DENN *XX, XINXI *YY, int sfd)
             mysql_free_result(res_ptr);  
         }
     
+    free(XZ);
+    
     return 0;
 }
 
@@ -1069,12 +1350,15 @@ int zhuce(XINXI *YY,int sfd)        //注册
         else
         {
             strncpy(YY->hylb, YY->name, sizeof(YY->hylb));
-            sprintf(A, "insert into student (id,password,name,qu,an,hylb,zt,sj) values (%d, '%s', '%s', '%s', '%s', '%s', 0, 0)",YY->m_id, YY->password,YY->name,YY->qu,YY->an, YY->hylb);
-            int res = mysql_query(conn,A);
+            sprintf(A, "insert into student (id,password,name,qu,an,hylb,zt,sj,grouptbale) values (%d, '%s', '%s', '%s', '%s', '%s', 0, 0, '%sgrouptable')",YY->m_id, YY->password,YY->name,YY->qu,YY->an, YY->hylb, YY->name);
+            ret = mysql_query(conn,A);
             strncpy(B,"注册成功",50);
             ret = 1;
             sprintf(A, "create table %s (id int, beizhu varchar(20), jl varchar(20), zt int)", YY->hylb);
-            mysql_query(conn,A);           //创建好友列表
+            ret = mysql_query(conn,A);           //创建好友列表
+            sprintf(A, "create table %sgrouptable (id int, name varchar(20))", YY->name);
+            ret = mysql_query(conn,A);           //创建已加群列表
+
         }  
     }
     //printf("A\n");
