@@ -22,6 +22,7 @@ typedef struct xinxi{
 	int ice_4;
 	int m_id;               //客户id
 	int y_id;               //好友id
+	int q_id;              //群id
 	int zt;                //状态
 	char name[20];         //name
 	char password[16];     //密码
@@ -29,6 +30,7 @@ typedef struct xinxi{
 	char an[100];          //答案
 	char beizhu[20];      //备注	
 	char hylb[20];         //好友列表
+	char cylb[20];         //成员列表
 	char jl[20];           //聊天记录
 	char buf[200];       //信息内容
 }XINXI;
@@ -48,6 +50,9 @@ typedef struct liaot{
 	int ice;
 	int id;
 	int zt;
+	char name[20];
+	char qu[200];
+	char an[100];
 	char buf[50];
 	char beizhu[20];
     char xinxi[200];
@@ -64,6 +69,8 @@ void C_zhaohui(XINXI *YY, int socket_fd);
 void C_haoy(XINXI *YY, DENN *XX, int socket_fd);
 
 void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd);
+
+void C_group(XINXI *YY, DENN *XX, int socket_fd);
 
 int C_TongZ(XINXI *YY, DENN *XX, int socket_fd);
 
@@ -165,7 +172,8 @@ int main()
 			}
 			else if(ice == 2)
 			{
-
+				YY.ice_1 = 3;
+				C_group(&YY, XX, socket_fd);
 			}
 			else if(ice == 3)
 			{
@@ -201,6 +209,218 @@ int main()
 	}while(1);
 	
 	return 0;
+}
+
+void C_group(XINXI *YY, DENN *XX, int socket_fd)
+{
+	int ret,ic,id;
+	char ch;
+	char A[100],name[20], buf[50],qu[200],an[100];
+	LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+	do
+	{
+		printf("*******************************************\n");
+		printf("***************0 退出 **********************\n");
+		printf("***************1 群的创建，解散***************\n");
+		printf("***************2 申请加群，退群***************\n");
+		printf("***************3 查看已加群和群成员************\n");
+		printf("***************4 查看聊天记录*****************\n");
+		printf("***************5 设置管理员*******************\n");
+		printf("***************6 踢人 ***********************\n");
+		printf("请输入你的选择：");
+		scanf("%d", &ic);
+		if(ic == 0)         //退出循环
+		{
+			break;
+		}
+		else if(ic == 1)    //群的创建，解散
+		{
+			YY->ice_2 = 31;
+			printf("*******************************************\n");
+			printf("***************R 退出 **********************\n");
+			printf("***************A 创建***********************\n");
+			printf("***************B 解散***********************\n");
+			printf("请输入你的选择：");
+			scanf("%c", &ch);
+			if(ch == 'A')
+			{
+				YY->ice_3 = 311;
+				printf("群ID：");
+				scanf("%d", &id);
+				YY->q_id = id;
+				printf("群名：");
+				scanf("%s", &name);
+				strncpy(YY->name, name, sizeof(YY->name));
+				printf("群类型：\t[A] 加群需要管理员同意加群\n");
+				printf("       \t[B] 加群需要回答问题加群\n");
+				printf("       \t[C] 加群无需管理员同意\n");
+				printf("       \t[R] 退出\n");
+				printf("群类型：");
+				scanf("%c", &ch);
+				if(ch == 'A')
+				{
+					YY->zt = 1;
+				}
+				else if(ch == 'B')
+				{
+					YY->zt = 2;
+					printf("问题：");
+					scanf("%s", &qu);
+					strncpy(YY->qu, qu, sizeof(qu));
+					printf("答案：");
+					scanf("%s",&an);
+					strncpy(YY->an, an, sizeof(an));
+				}
+				else if(ch == 'C')
+				{
+					YY->zt = 0;
+				}
+				else if(ch == 'R')
+				{
+					continue;
+				}
+				send(socket_fd, YY, sizeof(YY), 0);
+				read(socket_fd, buf, sizeof(buf));
+				printf("%s\n", buf);
+			}
+			else if(ch == 'B')
+			{
+				YY->ice_3 = 312;
+				printf("群ID：");
+				scanf("%d", id);
+				YY->q_id = id;
+				send(socket_fd, YY, sizeof(XINXI),0);
+				read(socket_fd,buf, sizeof(buf));
+				printf("%s\n",buf);
+			}
+			else if(ch == 'R')
+			{
+				continue;
+			}
+		}
+		else if(ic == 2)        //申请加群退群
+		{
+			YY->ice_2 = 32;
+			printf("[A] 加群\n");
+			printf("[B] 退群\n");
+			printf("[R] 退出\n");
+			printf("请输入你的选择：");
+			scanf("%c", &ch);
+			if(ch == 'A')
+			{
+				YY->ice_3 = 321;
+				YY->q_id = id;
+				send(socket_fd, YY, sizeof(XINXI),0);
+				recv(socket_fd, XZ, sizeof(LIAOT), 0);
+				printf("%s", XZ->buf);
+			}
+			else if(ch == 'B')
+			{
+				YY->ice_3 = 322;
+				YY->q_id = id;
+				send(socket_fd, YY, sizeof(XINXI),0);
+				recv(socket_fd, XZ, sizeof(LIAOT), 0);
+				printf("%s\n", XZ->buf);
+			}
+			else if(ch == 'R')
+			{
+				continue;
+			}
+		}
+		else if(ic == 3)        //查看已加群和群成员
+		{
+			YY->ice_2 = 33;
+			do
+			{
+				printf("[A] 查看已加群\n");
+				printf("[B] 查询群成员\n");
+				printf("[R] 退出\n");
+				printf("请输入你的选择：");
+				scanf("%c", &ch);
+				if(ch == 'A')
+				{
+					YY->ice_3 = 331;
+					send(socket_fd, YY, sizeof(XINXI),0);
+					recv(socket_fd, XZ, sizeof(LIAOT), 0);
+					if(strcmp(XZ->buf, "ok") == 0)
+					{
+						do
+						{
+							recv(socket_fd, XZ, sizeof(LIAOT), 0);
+							if(strcmp(XZ->xinxi, "over") != 0)
+							{
+								printf("%d\t%s\n", XZ->id, XZ->name);
+							}
+							else
+							{
+								break;
+							}
+						}while(1);
+					}
+				}
+				else if(ch == 'B')
+				{
+					YY->ice_3 = 332;
+					printf("群ID：");
+					scanf("%d", &id);
+					YY->q_id = id;
+
+				}
+				else if(ch == 'R')
+				{
+					break;
+				}
+			} while (1);
+		}
+		else if(ic == 4)        //查看聊天记录
+		{
+			YY->ice_2 = 34;
+			printf("群ID：");
+			scanf("%d",&id);
+			YY->q_id = id;
+			send(socket_fd, YY, sizeof(XINXI),0);
+			recv(socket_fd, XZ, sizeof(LIAOT), 0);
+			if(strcmp(XZ->buf, "ok") == 0)
+			{
+				do
+				{
+					recv(socket_fd, XZ, sizeof(LIAOT), 0);
+					if(strcmp(XZ->xinxi,"over") != 0)
+					{
+						printf("%s :%s",XZ->name,XZ->xinxi);
+					}
+				}while(strcmp(XZ->xinxi,"over") != 0);
+			}
+		}
+		else if(ic == 5)        //设置管理员
+		{
+			YY->ice_2 = 35;
+			printf("群ID：");
+			scanf("%d", &id);
+			YY->q_id = id;
+			send(socket_fd, YY, sizeof(XINXI),0);
+			recv(socket_fd, XZ, sizeof(LIAOT), 0);
+			printf("%s\n", XZ->buf);
+		}
+		else if(ic == 6)        //踢人
+		{
+			printf("群ID：");
+			scanf("%d", &id);
+			YY->q_id = id;
+			printf("要删除的群成员ID：");
+			scanf("%d", &id);
+			YY->y_id = id;
+			send(socket_fd, YY, sizeof(XINXI), 0);
+			recv(socket_fd, XZ, sizeof(LIAOT), 0);
+			printf("%s\n", XZ->buf);
+		}
+		else
+		{
+			printf("无此功能请重新输入！\n");
+		}
+	} while (1);
+
+	free(XZ);
 }
 
 int C_TongZ(XINXI *YY, DENN *XX, int socket_fd)
