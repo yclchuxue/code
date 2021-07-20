@@ -120,7 +120,7 @@ int main()
 		YY.ice_1 = 1;
 		do
 		{
-			memset(&YY, 0, sizeof(XINXI));
+			//memset(&YY, 0, sizeof(XINXI));
 			YY.ice_1 = 1;
 			face(&YY);     //1        2       3          0
 			if(YY.ice_2 == 11)             //登陆
@@ -228,6 +228,7 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 		printf("***************5 设置管理员*******************\n");
 		printf("***************6 踢人 ***********************\n");
 		printf("请输入你的选择：");
+		fflush(stdin);
 		scanf("%d", &ic);
 		if(ic == 0)         //退出循环
 		{
@@ -241,8 +242,9 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 			printf("***************A 创建***********************\n");
 			printf("***************B 解散***********************\n");
 			printf("请输入你的选择：");
-			scanf("%c", &ch);
-			if(ch == 'A')
+			fflush(stdin);
+			scanf("%s", &buf);
+			if(strcmp(buf, "A") == 0)
 			{
 				YY->ice_3 = 311;
 				printf("群ID：");
@@ -250,18 +252,21 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 				YY->q_id = id;
 				printf("群名：");
 				scanf("%s", &name);
+				printf("name = %s\n", name);
 				strncpy(YY->name, name, sizeof(YY->name));
-				printf("群类型：\t[A] 加群需要管理员同意加群\n");
+				printf("YY->name = %s\n",YY->name);
+				printf("群类型：[A] 加群需要管理员同意加群\n");
 				printf("       \t[B] 加群需要回答问题加群\n");
 				printf("       \t[C] 加群无需管理员同意\n");
 				printf("       \t[R] 退出\n");
 				printf("群类型：");
-				scanf("%c", &ch);
-				if(ch == 'A')
+				//fflush(stdin);
+				scanf("%s", &buf);
+				if(strcmp(buf, "A") == 0)
 				{
 					YY->zt = 1;
 				}
-				else if(ch == 'B')
+				else if(strcmp(buf, "B") == 0)
 				{
 					YY->zt = 2;
 					printf("问题：");
@@ -271,29 +276,30 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 					scanf("%s",&an);
 					strncpy(YY->an, an, sizeof(an));
 				}
-				else if(ch == 'C')
+				else if(strcmp(buf, "C") == 0)
 				{
 					YY->zt = 0;
 				}
-				else if(ch == 'R')
+				else if(strcmp(buf, "R") == 0)
 				{
 					continue;
 				}
-				send(socket_fd, YY, sizeof(YY), 0);
+				send(socket_fd, YY, sizeof(XINXI), 0);
 				read(socket_fd, buf, sizeof(buf));
 				printf("%s\n", buf);
 			}
-			else if(ch == 'B')
+			else if(strcmp(buf, "B") == 0)
 			{
 				YY->ice_3 = 312;
 				printf("群ID：");
-				scanf("%d", id);
+				scanf("%d", &id);
 				YY->q_id = id;
 				send(socket_fd, YY, sizeof(XINXI),0);
+				//printf("AAAA\n");
 				read(socket_fd,buf, sizeof(buf));
 				printf("%s\n",buf);
 			}
-			else if(ch == 'R')
+			else if(strcmp(buf, "R") == 0)
 			{
 				continue;
 			}
@@ -305,24 +311,49 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 			printf("[B] 退群\n");
 			printf("[R] 退出\n");
 			printf("请输入你的选择：");
-			scanf("%c", &ch);
-			if(ch == 'A')
+			fflush(stdin);
+			scanf("%s", &buf);
+			if(strcmp(buf, "A") == 0)
 			{
 				YY->ice_3 = 321;
+				printf("请输入群ID：");
+				scanf("%d", &id);
 				YY->q_id = id;
 				send(socket_fd, YY, sizeof(XINXI),0);
 				recv(socket_fd, XZ, sizeof(LIAOT), 0);
-				printf("%s", XZ->buf);
+				if(XZ->zt == 100)     //回答问题加入
+				{
+					printf("回答正确问题才能加入！！！\n");
+					printf("问题：%s\n", XZ->qu);
+					printf("答案：");
+					scanf("%s", &an);
+					if(strcmp(an, XZ->an) == 0)
+					{
+						YY->ice_1 = 3;
+						YY->ice_4 = 3211;
+						YY->zt = 1;          //1为回答正确
+					}
+					else
+					{
+						printf("答案错误！！！\n");
+					}
+				}
+				else
+				{
+					printf("%s\n", XZ->buf);
+				}
 			}
-			else if(ch == 'B')
+			else if(strcmp(buf, "B") == 0)
 			{
 				YY->ice_3 = 322;
+				printf("请输入群ID：");
+				scanf("%d", &id);
 				YY->q_id = id;
 				send(socket_fd, YY, sizeof(XINXI),0);
-				recv(socket_fd, XZ, sizeof(LIAOT), 0);
-				printf("%s\n", XZ->buf);
+				recv(socket_fd, buf, sizeof(buf), 0);
+				printf("%s\n", buf);
 			}
-			else if(ch == 'R')
+			else if(strcmp(buf, "R") == 0)
 			{
 				continue;
 			}
@@ -336,8 +367,9 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 				printf("[B] 查询群成员\n");
 				printf("[R] 退出\n");
 				printf("请输入你的选择：");
-				scanf("%c", &ch);
-				if(ch == 'A')
+				fflush(stdin);
+				scanf("%s", &buf);
+				if(strcmp(buf, "A") == 0)
 				{
 					YY->ice_3 = 331;
 					send(socket_fd, YY, sizeof(XINXI),0);
@@ -358,7 +390,7 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 						}while(1);
 					}
 				}
-				else if(ch == 'B')
+				else if(strcmp(buf, "B") == 0)
 				{
 					YY->ice_3 = 332;
 					printf("群ID：");
@@ -366,7 +398,7 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 					YY->q_id = id;
 
 				}
-				else if(ch == 'R')
+				else if(strcmp(buf, "R") == 0)
 				{
 					break;
 				}
