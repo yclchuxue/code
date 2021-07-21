@@ -97,6 +97,8 @@ void HY_send(XINXI *YY, int sfd);                       //将未读信息发送�
 
 void G_ADD_1(XINXI *YY,int sfd);
 
+void getDENN(DENN *XX, int id, int sfd);
+
 int set_1(int id);
 
 int drop_1(int id);
@@ -203,14 +205,13 @@ int main()
                     //printf("YY->ice = %d\n", YY.ice);
                     if(YY.ice_1 == 1)          //登陆，注册，找回密码
                     {
-                        int ret,re;
+                        int ret;
                         
                         ret = 0;
                         if(YY.ice_2 == 11)       //登陆
                         {
                             //printf("id = %d\tice = %d\n", XX->id, XX->ice);
                             ret = denglu(&YY, sfd);
-                            re = ret;
                         }
                         else if(YY.ice_2 == 12)      //注册
                         {
@@ -227,36 +228,11 @@ int main()
                                 ret = zhaohui(&YY, sfd);
                             }
                         }
-                        //printf("AAA\n");
-                        if(re == 1)
-                        {
-                            memset(XX, 0, sizeof(DENN));
-                            XX->id = YY.m_id;              //将m_id存入XX中
-                            sprintf(A, "update student set fd = %d where id = %d", sfd, XX->id);
-                            mysql_query(conn,A);           //登陆后将fd存入数据库中
-                            //获取name
-                            MYSQL_RES *res_ptr;
-                            MYSQL_ROW  res_row;
-                            sprintf(A, "select name from student where id = %d", YY.m_id);
-                            mysql_query(conn,A);
-                            res_ptr = mysql_store_result(conn);
-                            res_row = mysql_fetch_row(res_ptr);
-                            //printf("%s\n", res_row[0]);
-                            strncpy(XX->name, res_row[0], sizeof(XX->name));   
-                            mysql_free_result(res_ptr);
-                            //获取yhlb
-                            sprintf(A, "select hylb from student where id = %d", YY.m_id);
-                            mysql_query(conn,A);
-                            res_ptr = mysql_store_result(conn);
-                            res_row = mysql_fetch_row(res_ptr);
-                            strncpy(XX->hylb, res_row[0], sizeof(XX->hylb));
-                            mysql_free_result(res_ptr);
-                            memset(&YY, 0, sizeof(XINXI));
-                        }
-                        //printf("BBB\n");
+
                     }
                     else if(YY.ice_1 == 2)             //好友管理
                     {
+                        getDENN(XX, YY.m_id, sfd);
                         xuanzhe_1(XX, &YY, sfd);
                     }
                     else if(YY.ice_1 == 3)             //聊天群管理
@@ -268,20 +244,22 @@ int main()
                         }
                         else
                         {
+                            getDENN(XX, YY.m_id, sfd);
                             group_1(XX,&YY, sfd);
                         }
                     }
                     else if(YY.ice_1 == 4 && YY.ice_4 == 0)       //好友聊天
                     {
+                        getDENN(XX, YY.m_id, sfd);
                         xuanzhe_2(XX, &YY, sfd);
                     }
-                    else if(YY.ice_1 == 5)       //群聊天
+                    else if(YY.ice_1 == 5 && YY.ice_4 == 0)       //群聊天
                     {
+                        getDENN(XX, YY.m_id, sfd);
                         group_2(XX, &YY, sfd);
                     }
                     else if(YY.ice_1 == 6)      //查看通知
                     {
-                        YY.m_id = XX->id;
                         TongZ(&YY, sfd);
                     }
                     else if(YY.ice_4 == 666 && YY.ice_1 == 4)
@@ -299,8 +277,9 @@ int main()
                     {
                         G_get(&YY, sfd);
                     }
-                    else if(YY.ice_4 == 9999 && YY.ice_1 == 5)
+                    else if(YY.ice_4 == 999 && YY.ice_1 == 5)
                     {
+                        //YY.m_id = XX->id;
                         G_send(&YY, sfd);
                     }
                 }
@@ -312,6 +291,33 @@ int main()
 
     close(lfd);
     return 0;
+}
+
+void getDENN(DENN *XX, int id, int sfd)
+{
+    char A[100];
+    memset(XX, 0, sizeof(DENN));
+    XX->id = id;              //将m_id存入XX中
+    sprintf(A, "update student set fd = %d where id = %d", sfd, XX->id);
+    mysql_query(conn,A);           //登陆后将fd存入数据库中
+    //获取name
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW  res_row;
+    sprintf(A, "select name from student where id = %d", id);
+    mysql_query(conn,A);
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    //printf("%s\n", res_row[0]);
+    strncpy(XX->name, res_row[0], sizeof(XX->name));   
+    mysql_free_result(res_ptr);
+    //获取yhlb
+    sprintf(A, "select hylb from student where id = %d", id);
+    mysql_query(conn,A);
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    strncpy(XX->hylb, res_row[0], sizeof(XX->hylb));
+    mysql_free_result(res_ptr);
+
 }
 
 char *getname_from_id(int id)
@@ -808,22 +814,23 @@ int group_1(DENN *XX, XINXI *YY, int sfd)      //群管理
             }
             while(res_row = mysql_fetch_row(res_ptr))
             {
-                int i;
+                int i, sf;
                 memset(B, 0, sizeof(B));
                 for(i = 0; i < field-1; i++)
                 {
                     strcat(B, res_row[i]);
                     strcat(B, "\t");
                 }
-                if(strcmp(res_row[i], "1") == 0)
+                sf = atoi(res_row[i]);
+                if(sf == 1)
                 {
                     strcat(B, "管理员");
                 }
-                else if(strcmp(res_row[i], "2") == 0)
+                else if(sf == 2)
                 {
                     strcat(B, "群主");
                 }
-                else
+                else if(sf == 0)
                 {
                     strcat(B, "普通群成员");
                 }
@@ -858,22 +865,23 @@ int group_1(DENN *XX, XINXI *YY, int sfd)      //群管理
                     field = mysql_num_fields(res_ptr);      //返回你这张表有多少列
                     while(res_row = mysql_fetch_row(res_ptr))
                     {
-                        int i;
+                        int i, sf;
                         memset(B, 0, sizeof(B));
-                        for(i = 0; i < field-1; i++)
+                        for(i = 0; i < 2; i++)
                         {
                             strcat(B, res_row[i]);
                             strcat(B, "\t");
                         }
-                        if(strcmp(res_row[i], "1") == 0)
+                        sf = atoi(res_row[i]);
+                        if(sf == 1)
                         {
                             strcat(B, "管理员");
                         }
-                        else if(strcmp(res_row[i], "2") == 0)
+                        else if(sf == 2)
                         {
                             strcat(B, "群主");
                         }
-                        else
+                        else if(sf == 0)
                         {
                             strcat(B, "普通群成员");
                         }
@@ -1008,77 +1016,112 @@ int group_1(DENN *XX, XINXI *YY, int sfd)      //群管理
 
 void G_send(XINXI *YY, int sfd)
 {
+    //printf("AAA\n");
     char A[100];
-    int day, time, ret, sum = 0;
-    sprintf(A, "select day and time from %scylb where id = %d", getgroupname_from_id(YY->q_id), YY->m_id);
+    int day, time_1, ret, sum = 0;
+    sprintf(A, "select day from %scylb where id = %d", getgroupname_from_id(YY->q_id), YY->m_id);
     ret = mysql_query(conn,A);
+    //printf("A = %s\nret = %d\nYY->m_id = %d\nYY->q_id = %d\n", A, ret, YY->m_id, YY->q_id);
     MYSQL_RES *res_ptr;
     MYSQL_ROW  res_row;
     res_ptr = mysql_store_result(conn);
     res_row = mysql_fetch_row(res_ptr);
     if(res_row != NULL)
     {
-        day  = res_row[0];
-        time = res_row[1];
+        day  = atoi(res_row[0]);
     }
     mysql_free_result(res_ptr);
 
-    sprintf(A, "select * from %sjl where day > %d", getgroupname_from_id(YY->q_id),day);
+    sprintf(A, "select time from %scylb where id = %d", getgroupname_from_id(YY->q_id), YY->m_id);
     ret = mysql_query(conn,A);
+    //printf("A = %s\nret = %d\nYY->m_id = %d\nYY->q_id = %d\n", A, ret, YY->m_id, YY->q_id);
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    if(res_row != NULL)
+    {
+        time_1 = atoi(res_row[0]);
+    }
+    mysql_free_result(res_ptr);
+
+
+    LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+    sprintf(A, "select * from %sjl where day = %d and time > %d and id != %d", getgroupname_from_id(YY->q_id), day, time_1, YY->m_id);
+    ret = mysql_query(conn,A);
+    //printf("A = %s\nret = %d\n", A, ret);
+    res_ptr = mysql_store_result(conn);
+    res_row = mysql_fetch_row(res_ptr);
+    mysql_free_result(res_ptr);
+    if(res_row != NULL)
+    {
+            //有未读信息
+        sprintf(A, "select * from %sjl where day = %d and time > %d and id != %d", getgroupname_from_id(YY->q_id), day, time_1, YY->m_id);
+        ret = mysql_query(conn,A);
+        printf("A = %s\nret = %d\n", A, ret);
+        res_ptr = mysql_store_result(conn);
+        //int field = mysql_num_fields(res_ptr);
+        while(res_row = mysql_fetch_row(res_ptr))
+        {
+            int ret_1, ret_2;
+            XZ->zt = 1;
+            strncpy(XZ->name, res_row[1], sizeof(XZ->name));      //名字
+            strncpy(XZ->xinxi, res_row[2], sizeof(XZ->xinxi));        //信息
+            day  = atoi(res_row[3]);     //该信息时间
+            time_1 = atoi(res_row[4]);    
+            sprintf(A, "update %scylb set day = %d where id = %d", getgroupname_from_id(YY->q_id), day, YY->m_id);
+            ret_1 = mysql_query(conn,A);
+            //printf("A = %s\nret = %d\n", A, ret);
+            sprintf(A, "update %scylb set time = %d where id = %d", getgroupname_from_id(YY->q_id), time_1, YY->m_id);
+            ret_2 = mysql_query(conn,A);
+            //printf("A = %s\nret = %d\n", A, ret);
+            if(ret_1 == 0 && ret_2 == 0)
+            {
+                printf("%s : %s\n", XZ->name, XZ->xinxi);
+                send(sfd, XZ, sizeof(LIAOT), 0);
+            }
+        }
+        mysql_free_result(res_ptr);
+    }
+    else
+    {
+        sum = 0;         //无未读信息
+    }
+    sprintf(A, "select * from %sjl where day > %d and id != %d", getgroupname_from_id(YY->q_id),day,YY->m_id);
+    ret = mysql_query(conn,A);
+    //printf("A = %s\nret = %d\n", A, ret);
     res_ptr = mysql_store_result(conn);
     res_row = mysql_fetch_row(res_ptr);
     mysql_free_result(res_ptr);
     if(res_row == NULL)
     {
-        sprintf(A, "select * from %sjl where day = %d and time > %d", getgroupname_from_id(YY->q_id), day, time);
-        ret = mysql_query(conn,A);
-        res_ptr = mysql_store_result(conn);
-        res_row = mysql_fetch_row(res_ptr);
-        mysql_free_result(res_ptr);
-        if(res_row != NULL)
-        {
-            LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-            XZ->zt = 1;
-            send(sfd, XZ, sizeof(LIAOT), 0);   //提示有未读信息
-                //有未读信息
-            sprintf(A, "select * from %sjl where day = %d and time > %d", getgroupname_from_id(YY->q_id), day, time);
-            ret = mysql_query(conn,A);
-            res_ptr = mysql_store_result(conn);
-            //int field = mysql_num_fields(res_ptr);
-            while(res_row = mysql_fetch_row(res_ptr))
-            {
-                
-                strncpy(XZ->name, res_row[1], sizeof(XZ->name));
-                strncpy(XZ->buf, res_row[2], sizeof(XZ->buf));
-                day  = atoi(res_row[3]);
-                time = atoi(res_row[4]);    
-                sprintf(A, "update from %scylb set day = %d and set time = %d where id = %d", getgroupname_from_id(YY->q_id), day, time);
-                ret = mysql_query(conn,A);
-                if(ret == 0)
-                {
-                    send(sfd, XZ, sizeof(LIAOT), 0);
-                }
-            }
-            free(XZ);
-        }
-        else
-        {
-            sum = 0;         //无未读信息
-        }
-    }
-    else
-    {
-        LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-        XZ->zt = 1;
-        send(sfd, XZ, sizeof(LIAOT), 0);   
+        
+        XZ->zt = 1; 
         //有未读信息
-        sprintf(A, "select * from %sjl where day > %d", getgroupname_from_id(YY->q_id),day);
+        sprintf(A, "select * from %sjl where day > %d and id != %d", getgroupname_from_id(YY->q_id),day,YY->m_id);
         ret = mysql_query(conn,A);
+        //printf("A = %s\nret = %d\n", A, ret);
         res_ptr = mysql_store_result(conn);
-        res_row = mysql_fetch_row(res_ptr);
-        free(XZ);
+        while(res_row = mysql_fetch_row(res_ptr))
+        {
+            int ret_1, ret_2;
+            XZ->zt = 1;
+            strncpy(XZ->name, res_row[1], sizeof(XZ->name));      //名字
+            strncpy(XZ->xinxi, res_row[2], sizeof(XZ->xinxi));        //信息
+            day  = atoi(res_row[3]);     //该信息时间
+            time_1 = atoi(res_row[4]);    
+            sprintf(A, "update %scylb set day = %d where id = %d", getgroupname_from_id(YY->q_id), day, YY->m_id);
+            ret_1 = mysql_query(conn,A);
+            //printf("A = %s\nret = %d\n", A, ret);
+            sprintf(A, "update %scylb set time = %d where id = %d", getgroupname_from_id(YY->q_id), time_1, YY->m_id);
+            ret_2 = mysql_query(conn,A);
+            //printf("A = %s\nret = %d\n", A, ret);
+            if(ret_1 == 0 && ret_2 == 0)
+            {
+                send(sfd, XZ, sizeof(LIAOT), 0);
+            }
+        }
     }
-
+    XZ->zt = 0;
+    send(sfd, XZ, sizeof(LIAOT), 0);
 }
 
 void G_get(XINXI *YY, int sfd)
@@ -1095,18 +1138,21 @@ void G_get(XINXI *YY, int sfd)
     {
         return;
     }
-    sprintf(A, "insert into %sjl (id, name, xinxi, day, time) values (%d, '%s', %d, 1)",getgroupname_from_id(YY->q_id), YY->m_id, getname_from_id(YY->m_id), YY->buf, day, time);
+    sprintf(A, "insert into %sjl (id, name, xinxi, day, time) values (%d, '%s', '%s', %d, %d)",getgroupname_from_id(YY->q_id), YY->m_id, getname_from_id(YY->m_id), YY->buf, day, time);
     ret = mysql_query(conn,A);
-
+    //printf("A = %s\nret = %d\n", A, ret);
 }
 
 int group_2(DENN *XX, XINXI *YY, int sfd)      //群聊天
 {
     int ret;
     char A[100], B[50];
+    YY->m_id = XX->id;
     if(YY->ice_2 == 41)
     {
+        //printf("YY->m_id = %d\n", YY->m_id);
         sprintf(A, "select * from %sgrouptable where id = %d", getname_from_id(YY->m_id), YY->q_id);
+        //printf("A = %s\n", A);
         ret = mysql_query(conn,A);
         MYSQL_RES *res_ptr;
         MYSQL_ROW  res_row;
