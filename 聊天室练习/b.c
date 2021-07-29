@@ -1,5 +1,5 @@
 /**************************
- * 客户端
+ * 客户端          版本 accept---->thread--->epoll
  * ***********************/
 #include <stdio.h>
 #include <stdlib.h>
