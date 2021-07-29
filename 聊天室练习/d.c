@@ -1,6 +1,6 @@
-/**************************
- * 客户端
- * ***********************/
+/*************************************************************
+ * 服务器       thread--->epoll----->accept----->eopll_in
+ * ***********************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,19 +21,20 @@ typedef struct xinxi{
 	int ice_1;              //功能选择
 	int ice_2;
 	int ice_3;
-	int ice_4;
+    int ice_4;
 	int m_id;               //客户id
 	int y_id;               //好友id
 	int q_id;              //群id
+    int fd;                //套接字码
 	int zt;                //状态
 	char name[20];         //name
 	char password[16];     //密码
 	char qu[200];          //问题
 	char an[100];          //答案
 	char beizhu[20];      //备注	
-	char hylb[20];         //好友列表
-	char cylb[20];         //成员列表
-	char jl[20];           //聊天记录
+    char hylb[20];         //好友列表
+    char cylb[20];         //成员列表
+    char jl[20];           //聊天记录
 	char buf[200];       //信息内容
 }XINXI;
 
@@ -60,7 +61,7 @@ typedef struct liaot{
     char xinxi[200];
 }LIAOT;
 
-int Socket_fd, Y_ID, M_ID, Q_ID, N;
+int Socket_fd, Y_ID, M_ID, Q_ID, M;
 
 void C_denn(XINXI *YY, int socket_fd);
 
@@ -82,9 +83,12 @@ void C_get(int socket_fd);
 
 void C_document(XINXI *YY, int socket_fd);
 
+void get_XX(int socket_fd);
+
 void *thread(void *arg);
 
 void face(XINXI *YY);
+
 
 int main()
 {
@@ -118,7 +122,7 @@ int main()
 	{
 		perror("connect failed!\n");
 	}
-
+	memset(&YY, 0, sizeof(XINXI));
 	Socket_fd = socket_fd;
 
 	do{          //*******************************************************************************
@@ -126,22 +130,26 @@ int main()
 		YY.ice_1 = 1;
 		do
 		{
-			//memset(&YY, 0, sizeof(XINXI));
+			memset(&YY, 0, sizeof(XINXI));
 			YY.ice_1 = 1;
+			printf("\033c");
 			face(&YY);     //1        2       3          0
 			if(YY.ice_2 == 11)             //登陆
 			{
+				printf("\033c");
 				C_denn(&YY, socket_fd);
 				M_ID = YY.m_id;
 				break;
 			}
 			else if(YY.ice_2 == 12)        //注册
 			{
+				printf("\033c");
 				C_zhuce(&YY, socket_fd);
 				//face(XX);
 			} 
 			else if(YY.ice_2 == 13)       //找回密码
 			{
+				printf("\033c");
 				C_zhaohui(&YY, socket_fd);
 
 				//face(XX);
@@ -159,17 +167,19 @@ int main()
 		do{                                                  //************************************************
 			memset(&YY, 0, sizeof(XINXI));
 			int ice;
-			printf("*************************************\n");
-			printf("***********1 好友管理******************\n");
-			printf("***********2 聊天群管理****************\n");
-			printf("***********3 好友聊天*****************\n");
-			printf("***********4 群聊天*******************\n");
-			printf("***********5 查看通知******************\n");
-			printf("***********6 文件传输******************\n");
-			printf("***********0 退出帐号 *****************\n");
-			printf("请输入你的选择：");
+			printf("\033c");
+			get_XX(socket_fd);
+			printf("\t\t*************************************\n");
+			printf("\t\t***********1 好友管理******************\n");
+			printf("\t\t***********2 聊天群管理****************\n");
+			printf("\t\t***********3 好友聊天*****************\n");
+			printf("\t\t***********4 群聊天*******************\n");
+			printf("\t\t***********5 查看通知******************\n");
+			printf("\t\t***********6 文件传输******************\n");
+			printf("\t\t***********0 退出帐号 *****************\n");
+			printf("\t\t请输入你的选择：");
 			scanf("%d", &ice);
-
+			printf("\033c");
 			if(ice == 1)        //好友管理
 			{
 				YY.ice_1 = 2;
@@ -209,6 +219,9 @@ int main()
 			}	
 			else if(ice == 0)  //退出帐号
 			{
+				YY.ice_1 = 404;
+				YY.m_id = M_ID;
+				send(socket_fd, &YY, sizeof(XINXI), 0);
 				break;
 			}
 
@@ -226,6 +239,28 @@ int main()
 	return 0;
 }
 
+
+
+void get_XX(int socket_fd)
+{
+	XINXI YY;
+	char buf[50];
+	YY.m_id = M_ID;
+	YY.ice_1 = 555;
+	send(socket_fd, &YY, sizeof(XINXI), 0);
+
+	do
+	{
+	
+		recv(socket_fd, buf, sizeof(buf), 0);
+		if(strcmp(buf, "over") == 0)
+		{
+			break;
+		}
+		printf("\t\t%s\n", buf);
+	}while(1);
+}
+
 void C_document(XINXI *YY, int socket_fd)
 {
 	LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
@@ -233,12 +268,12 @@ void C_document(XINXI *YY, int socket_fd)
 	char file_len[16], file_name[128],file_path[128],sign[10];
 	char buf[1024];
 
-	printf("********************1 文件发送 *********************\n");
-	printf("********************2 文件接收 *********************\n");
-	printf("********************0 退出     *********************\n");
-	printf("请输入你的选择：");
+	printf("\t\t********************1 文件发送 *********************\n");
+	printf("\t\t********************2 文件接收 *********************\n");
+	printf("\t\t********************0 退出     *********************\n");
+	printf("\t\t请输入你的选择：");
 	scanf("%d", &n);
-	printf("请输入好友ID：");
+	printf("\t\t请输入好友ID：");
 	scanf("%d", &id);
 	YY->y_id = id;
 	if(n == 0)
@@ -247,7 +282,7 @@ void C_document(XINXI *YY, int socket_fd)
 	}
 	else if(n == 1)     //文件发送
 	{
-		printf("请输入文件：");
+		printf("\t\t请输入文件：");
 		scanf("%s", &file_path);
 		memset(file_name, 0, sizeof(file_name));
 		strncpy(file_name, basename(file_path), sizeof(file_name));
@@ -255,7 +290,7 @@ void C_document(XINXI *YY, int socket_fd)
 		fd = open(file_path, O_RDWR);
 		if(fd == -1)
 		{
-			printf("打开文件失败！！！\n");
+			printf("\t\t打开文件失败！！！\n");
 			return ;
 		}
 
@@ -276,12 +311,13 @@ void C_document(XINXI *YY, int socket_fd)
 			memset(buf, 0, sizeof(buf));
 
 			ret = read(fd, buf, sizeof(buf));
-			printf("ret = %d\n", ret);
+			//printf("ret = %d\n", ret);
 			if(ret <= 0)
 			{
 				sprintf(sign, "ok");
 				send(socket_fd, sign, sizeof(sign), 0);
-				printf("文件%s发送成功！！！\n", file_name);
+				close(fd); 
+				printf("\t\t文件%s发送成功！！！\n", file_name);
 				break;
 			}
 
@@ -299,50 +335,60 @@ void C_document(XINXI *YY, int socket_fd)
 		YY->ice_2 = 72;
 		send(socket_fd, YY, sizeof(XINXI),0);
 
-		int ret, fd;
+		int ret, fd, sum,i;
     	char file_len[16], file_name[128], buf[1024],file_new_name[128],sign[10];
 
-		printf("等待文件传入！\n");
+		read(socket_fd, &sum, sizeof(int));
+		printf("\t\t有%d份文件需要接收！！！\n", sum);
 
-		recv(socket_fd, XZ, sizeof(XZ),0);
+		for(i = 0; i < sum; i++)
+		{
 
-		strncpy(file_len, XZ->beizhu, sizeof(file_len));
-        strncpy(file_name, XZ->xinxi, sizeof(file_name));
+			printf("\t\t等待文件传入！\n");
 
-        printf("文件名：%s\n文件大小：%s\n", file_name, file_len);
+			recv(socket_fd, XZ, sizeof(LIAOT), 0);
 
-        sprintf(file_new_name, "c-recv-%s", file_name);
-        printf("%s", file_new_name);
+			strncpy(file_len, XZ->beizhu, sizeof(file_len));
+			strncpy(file_name, XZ->xinxi, sizeof(file_name));
 
-        fd = open(file_new_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
-        
-        printf("fd = %d\n", fd);
+			printf("\t\t文件名：%s\n文件大小：%s\n", file_name, file_len);
 
-        int size = atoi(file_len);
+			sprintf(file_new_name, "c-%s", file_name);
+			//printf("\t\t%s", file_new_name);
 
-        int write_len = 0;
+			fd = open(file_new_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
+			
+			//printf("fd = %d\n", fd);
 
-        while(1)
-        {
-            memset(buf, 0, sizeof(buf));
+			int size = atoi(file_len);
 
-            recv(socket_fd, sign, sizeof(sign), 0);
+			int write_len = 0;
 
-            //printf("ret = %d\n", ret);
-            if(strcmp(sign, "ok") == 0)
-            {
-                printf("文件接收成功！！！\n");
-                break;
-            }
+			while(1)
+			{
+				memset(buf, 0, sizeof(buf));
 
-            ret = recv(socket_fd, buf, sizeof(buf), 0);
-            write(fd, buf, ret);
+				recv(socket_fd, sign, sizeof(sign), 0);
 
-            write_len += ret;
-        }
+				//printf("ret = %d\n", ret);
+				if(strcmp(sign, "ok") == 0)
+				{
+					printf("\t\t文件接收成功！！！\n");
+					close(fd);
+					break;
+				}
 
+				ret = recv(socket_fd, buf, sizeof(buf), 0);
+				write(fd, buf, ret);
 
+				write_len += ret;
+			}
+		}
 	}
+	printf("\t\t请输入enter继续!!!\n");
+	setbuf(stdin, NULL);
+	getchar();
+	setbuf(stdin, NULL);
 	free(XZ);
 }
 
@@ -370,18 +416,15 @@ void *thread_g(void *arg)
 			if(XZ.zt > 0)
 			{
 				printf("\b\b\b\b\b\b\n");
-				printf("%s : %s\n", XZ.name, XZ.xinxi);
-				printf("MINE :");
+				printf("\t\t%s : %s\n", XZ.name, XZ.xinxi);
+				printf("\t\tMINE :");
 			}
 			else if(XZ.zt == 0)
 			{
 				break;
 			}
 		}
-	} while (1);
-	//printf("HHHHHHHHHHHHHHH\n");
-	//return ;
-
+	} while (M == 1);
 }
 
 void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
@@ -391,11 +434,13 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 	char beizhu[20],buf[50];
 
 		LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-		printf("**************************************\n");
-		printf("*************0 退出 *******************\n");
-		printf("*************1 群聊天 **************\n");
-		printf("请输入你的选择：");
+		get_XX(socket_fd);
+		printf("\t\t**************************************\n");
+		printf("\t\t*************0 退出 *******************\n");
+		printf("\t\t*************1 群聊天 **************\n");
+		printf("\t\t请输入你的选择：");
 		scanf("%d", &ic);
+		printf("\033c");
 		if(ic == 0)
 		{
 			return;
@@ -404,15 +449,16 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 		{
 			YY->ice_2 = 41;
 			YY->ice_4 = 0;
-			printf("请输入群ID:");
+			printf("\t\t请输入群ID:");
 			scanf("%d",&id);
 			YY->q_id = id;
 			YY->m_id = M_ID;
 			send(socket_fd,YY, sizeof(XINXI), 0);
+
 			read(socket_fd,buf, sizeof(buf));
 			if(strcmp(buf, "ok") != 0)
 			{
-				printf("%s",buf);
+				printf("\t\t%s",buf);
 				return ;
 			}
 			//fflush(stdin);
@@ -422,18 +468,19 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 			//pthread_mutex_init(&lock, NULL);                   //初始化锁
     		//pthread_cond_init(&cond, NULL);                    //初始化条件变量
 
+			M = 1;
 			if(pthread_create(&thid, NULL, thread_g, NULL) != 0)
 			{
 				//创建失败
-				printf("创建线程失败！\n");
+				printf("\t\t创建线程失败！\n");
 				return ;
 			}
 			else
 			{
-				printf("创建成功！\n");
+				//printf("\t\t创建成功！\n");
 			}
 
-			write(STDOUT_FILENO, "MINE :", 7);
+			write(STDOUT_FILENO, "\t\tMINE :", 7);
 
 			do{
 				//要监视的描述符集合
@@ -466,10 +513,11 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 
 						if(strcmp(buf, "exit") == 0)
 						{
+							M = 0;
 							pthread_join(thid, NULL);   //销毁线程
 							return ;
 						}
-						printf("\nMINE: ");
+						printf("\n\t\tMINE: ");
 						N = 0;
 					}
 				}
@@ -486,17 +534,20 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 	LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
 	do
 	{
-		printf("*******************************************\n");
-		printf("***************0 退出 **********************\n");
-		printf("***************1 群的创建，解散***************\n");
-		printf("***************2 申请加群，退群***************\n");
-		printf("***************3 查看已加群和群成员************\n");
-		printf("***************4 查看聊天记录*****************\n");
-		printf("***************5 设置管理员*******************\n");
-		printf("***************6 踢人 ***********************\n");
-		printf("请输入你的选择：");
-		fflush(stdin);
+		printf("\033c");
+		get_XX(socket_fd);
+		printf("\t\t*******************************************\n");
+		printf("\t\t***************0 退出 **********************\n");
+		printf("\t\t***************1 群的创建，解散***************\n");
+		printf("\t\t***************2 申请加群，退群***************\n");
+		printf("\t\t***************3 查看已加群和群成员************\n");
+		printf("\t\t***************4 查看聊天记录*****************\n");
+		printf("\t\t***************5 设置管理员*******************\n");
+		printf("\t\t***************6 踢人 ***********************\n");
+		printf("\t\t请输入你的选择：");
+		setbuf(stdin, NULL);
 		scanf("%d", &ic);
+		printf("\033c");
 		if(ic == 0)         //退出循环
 		{
 			break;
@@ -504,30 +555,31 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 		else if(ic == 1)    //群的创建，解散
 		{
 			YY->ice_2 = 31;
-			printf("*******************************************\n");
-			printf("***************R 退出 **********************\n");
-			printf("***************A 创建***********************\n");
-			printf("***************B 解散***********************\n");
-			printf("请输入你的选择：");
-			fflush(stdin);
+			printf("\t\t*******************************************\n");
+			printf("\t\t***************R 退出 **********************\n");
+			printf("\t\t***************A 创建***********************\n");
+			printf("\t\t***************B 解散***********************\n");
+			printf("\t\t请输入你的选择：");
+			setbuf(stdin, NULL);
 			scanf("%s", &buf);
+			printf("\033c");
 			if(strcmp(buf, "A") == 0)
 			{
 				YY->ice_3 = 311;
 				YY->m_id  = M_ID;
-				printf("群ID：");
+				printf("\t\t群ID：");
 				scanf("%d", &id);
 				YY->q_id = id;
-				printf("群名：");
+				printf("\t\t群名：");
 				scanf("%s", &name);
-				printf("name = %s\n", name);
+				//printf("name = %s\n", name);
 				strncpy(YY->name, name, sizeof(YY->name));
-				printf("YY->name = %s\n",YY->name);
-				printf("群类型：[A] 加群需要管理员同意加群\n");
-				printf("       \t[B] 加群需要回答问题加群\n");
-				printf("       \t[C] 加群无需管理员同意\n");
-				printf("       \t[R] 退出\n");
-				printf("群类型：");
+				//printf("YY->name = %s\n",YY->name);
+				printf("\t\t群类型：[A] 加群需要管理员同意加群\n");
+				printf("\t\t       \t[B] 加群需要回答问题加群\n");
+				printf("\t\t       \t[C] 加群无需管理员同意\n");
+				printf("\t\t       \t[R] 退出\n");
+				printf("\t\t群类型：");
 				//fflush(stdin);
 				scanf("%s", &buf);
 				if(strcmp(buf, "A") == 0)
@@ -537,10 +589,10 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 				else if(strcmp(buf, "B") == 0)
 				{
 					YY->zt = 2;
-					printf("问题：");
+					printf("\t\t问题：");
 					scanf("%s", &qu);
 					strncpy(YY->qu, qu, sizeof(qu));
-					printf("答案：");
+					printf("\t\t答案：");
 					scanf("%s",&an);
 					strncpy(YY->an, an, sizeof(an));
 				}
@@ -555,18 +607,26 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 				send(socket_fd, YY, sizeof(XINXI), 0);
 				read(socket_fd, buf, sizeof(buf));
 				printf("%s\n", buf);
+				printf("\t\t请输入enter继续!!!\n");
+				setbuf(stdin, NULL);
+				getchar();
+				setbuf(stdin, NULL);
 			}
 			else if(strcmp(buf, "B") == 0)
 			{
 				YY->ice_3 = 312;
 				YY->m_id  = M_ID;
-				printf("群ID：");
+				printf("\t\t群ID：");
 				scanf("%d", &id);
 				YY->q_id = id;
 				send(socket_fd, YY, sizeof(XINXI),0);
 				//printf("AAAA\n");
 				read(socket_fd,buf, sizeof(buf));
-				printf("%s\n",buf);
+				printf("\t\t%s\n",buf);
+				printf("\t\t请输入enter继续!!!\n");
+				setbuf(stdin, NULL);
+				getchar();
+				setbuf(stdin, NULL);
 			}
 			else if(strcmp(buf, "R") == 0)
 			{
@@ -577,25 +637,26 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 		{
 			YY->ice_2 = 32;
 			YY->m_id  = M_ID;
-			printf("[A] 加群\n");
-			printf("[B] 退群\n");
-			printf("[R] 退出\n");
-			printf("请输入你的选择：");
-			fflush(stdin);
+			printf("\t\t[A] 加群\n");
+			printf("\t\t[B] 退群\n");
+			printf("\t\t[R] 退出\n");
+			printf("\t\t请输入你的选择：");
+			setbuf(stdin, NULL);
 			scanf("%s", &buf);
+			printf("\033c");
 			if(strcmp(buf, "A") == 0)
 			{
 				YY->ice_3 = 321;
-				printf("请输入群ID：");
+				printf("\t\t请输入群ID：");
 				scanf("%d", &id);
 				YY->q_id = id;
 				send(socket_fd, YY, sizeof(XINXI),0);
 				recv(socket_fd, XZ, sizeof(LIAOT), 0);
 				if(XZ->zt == 100)     //回答问题加入
 				{
-					printf("回答正确问题才能加入！！！\n");
-					printf("问题：%s\n", XZ->qu);
-					printf("答案：");
+					printf("\t\t回答正确问题才能加入！！！\n");
+					printf("\t\t问题：%s\n", XZ->qu);
+					printf("\t\t答案：");
 					scanf("%s", &an);
 					if(strcmp(an, XZ->an) == 0)
 					{
@@ -605,23 +666,31 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 					}
 					else
 					{
-						printf("答案错误！！！\n");
+						printf("\t\t答案错误！！！\n");
 					}
 				}
 				else
 				{
-					printf("%s\n", XZ->buf);
+					printf("\t\t%s\n", XZ->buf);
 				}
+				printf("\t\t请输入enter继续!!!\n");
+				setbuf(stdin, NULL);
+				getchar();
+				setbuf(stdin, NULL);
 			}
 			else if(strcmp(buf, "B") == 0)
 			{
 				YY->ice_3 = 322;
-				printf("请输入群ID：");
+				printf("\t\t请输入群ID：");
 				scanf("%d", &id);
 				YY->q_id = id;
 				send(socket_fd, YY, sizeof(XINXI),0);
 				recv(socket_fd, buf, sizeof(buf), 0);
-				printf("%s\n", buf);
+				printf("\t\t%s\n", buf);
+				printf("\t\t请输入enter继续!!!\n");
+				setbuf(stdin, NULL);
+				getchar();
+				setbuf(stdin, NULL);
 			}
 			else if(strcmp(buf, "R") == 0)
 			{
@@ -634,12 +703,14 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 			YY->m_id  = M_ID;
 			do
 			{
-				printf("[A] 查看已加群\n");
-				printf("[B] 查询群成员\n");
-				printf("[R] 退出\n");
-				printf("请输入你的选择：");
-				fflush(stdin);
+				printf("\033c");
+				printf("\t\t[A] 查看已加群\n");
+				printf("\t\t[B] 查询群成员\n");
+				printf("\t\t[R] 退出\n");
+				printf("\t\t请输入你的选择：");
+				setbuf(stdin, NULL);
 				scanf("%s", &buf);
+				printf("\033c");
 				if(strcmp(buf, "A") == 0)
 				{
 					YY->ice_3 = 331;
@@ -652,7 +723,7 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 							recv(socket_fd, buf, sizeof(buf), 0);
 							if(strcmp(buf, "over") != 0)
 							{
-								printf("%s\n", buf);
+								printf("\t\t%s\n", buf);
 							}
 							else
 							{
@@ -664,7 +735,7 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 				else if(strcmp(buf, "B") == 0)
 				{
 					YY->ice_3 = 332;
-					printf("群ID：");
+					printf("\t\t群ID：");
 					scanf("%d", &id);
 					YY->q_id = id;
 					send(socket_fd, YY, sizeof(XINXI),0);
@@ -674,7 +745,7 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 						recv(socket_fd, buf, sizeof(buf), 0);
 						if(strcmp(buf, "over") != 0)
 						{
-							printf("%s\n", buf);
+							printf("\t\t%s\n", buf);
 						}
 						else
 						{
@@ -686,60 +757,95 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 				{
 					break;
 				}
+				printf("\t\t请输入enter继续!!!\n");
+				setbuf(stdin, NULL);
+				getchar();
+				setbuf(stdin, NULL);
 			} while (1);
 		}
 		else if(ic == 4)        //查看聊天记录
 		{
 			YY->ice_2 = 34;
 			YY->m_id  = M_ID;
-			printf("群ID：");
+			printf("\t\t群ID：");
 			scanf("%d",&id);
 			YY->q_id = id;
 			send(socket_fd, YY, sizeof(XINXI),0);
+			int DAY = 0, year, month, day;
 			recv(socket_fd, XZ, sizeof(LIAOT), 0);
 			if(strcmp(XZ->buf, "ok") == 0)
 			{
 				do
 				{
 					recv(socket_fd, XZ, sizeof(LIAOT), 0);
+					if(XZ->zt == 0)
+					{
+						break;
+					}
 					if(strcmp(XZ->xinxi,"over") != 0)
 					{
-						printf("%s :%s",XZ->name,XZ->xinxi);
+						year  = XZ->zt/10000;
+						month = (XZ->zt - year*10000)/100;
+						day   = XZ->zt - year*10000 - month*100;
+						if(DAY == 0)
+						{
+							DAY = XZ->zt;
+							printf("\t\t\t\033[31m%d年%d月%d日\n\033[0m", year, month, day);
+						}
+						else if(DAY != XZ->zt)
+						{
+							DAY = XZ->zt;
+							printf("\t\t\t\033[31m%d年%d月%d日\n\033[0m", year, month, day);
+						}
+						printf("\t\t%s :%s\n\n",XZ->name,XZ->xinxi);
 					}
 				}while(strcmp(XZ->xinxi,"over") != 0);
 			}
+			printf("\t\t请输入enter继续!!!\n");
+			setbuf(stdin, NULL);
+			getchar();
+			setbuf(stdin, NULL);
 		}
 		else if(ic == 5)        //设置管理员
 		{
 			YY->ice_2 = 35;
 			YY->m_id  = M_ID;
-			printf("群ID：");
+			printf("\t\t群ID：");
 			scanf("%d", &id);
 			YY->q_id = id;
-			printf("群成员ID：");
+			printf("\t\t群成员ID：");
 			scanf("%d", &id);
 			YY->y_id = id;
 			send(socket_fd, YY, sizeof(XINXI),0);
 			recv(socket_fd, buf, sizeof(buf), 0);
-			printf("%s\n", buf);
+			printf("\t\t%s\n", buf);
+			printf("\t\t请输入enter继续!!!\n");
+			setbuf(stdin, NULL);
+			getchar();
+			setbuf(stdin, NULL);
 		}
 		else if(ic == 6)        //踢人
 		{
 			YY->ice_2 = 36;
 			YY->m_id  = M_ID;
-			printf("群ID：");
+			printf("\t\t群ID：");
 			scanf("%d", &id);
 			YY->q_id = id;
-			printf("要删除的群成员ID：");
+			printf("\t\t要删除的群成员ID：");
+			setbuf(stdin, NULL);
 			scanf("%d", &id);
 			YY->y_id = id;
 			send(socket_fd, YY, sizeof(XINXI), 0);
-			recv(socket_fd, XZ, sizeof(LIAOT), 0);
-			printf("%s\n", XZ->buf);
+			recv(socket_fd, buf, sizeof(buf), 0);
+			printf("\t\t%s\n", buf);
+			printf("\t\t请输入enter继续!!!\n");
+			setbuf(stdin, NULL);
+			getchar();
+			setbuf(stdin, NULL);
 		}
 		else
 		{
-			printf("无此功能请重新输入！\n");
+			printf("\t\t无此功能请重新输入！\n");
 		}
 	} while (1);
 
@@ -753,98 +859,106 @@ int C_TongZ(XINXI *YY, DENN *XX, int socket_fd)
 	read(socket_fd, &sum, sizeof(int));
 
 	do{
-
-	printf("你一共有%d条通知！！！\n", sum);
-	printf("[A] 查看所有通知  [B] 逐个处理所有通知 [R] 退出\n");
-	printf("请选择功能:");
-	scanf("%s", buf);
-	if (strcmp(buf, "A") == 0)
-	{
-		write(socket_fd, buf, sizeof(buf));
-		do
+		printf("\033c");
+		setbuf(stdin, NULL);
+		printf("\t\t你一共有%d条通知！！！\n", sum);
+		printf("\t\t[A] 查看所有通知  [B] 逐个处理所有通知 [R] 退出\n");
+		printf("\t\t请选择功能:");
+		setbuf(stdin, NULL);
+		scanf("%s", buf);
+		if (strcmp(buf, "A") == 0)
 		{
-			read(socket_fd, buf, sizeof(buf));
-			if(strcmp(buf, "over") != 0)
+			write(socket_fd, buf, sizeof(buf));
+			do
 			{
-				printf("%s\n", buf);
-			}
-		} while (strcmp(buf, "over") != 0);
-	}
-	else if (strcmp(buf, "B") == 0)
-	{
-		write(socket_fd, buf, sizeof(buf));
-		LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-		while(1)
+				read(socket_fd, buf, sizeof(buf));
+				if(strcmp(buf, "over") != 0)
+				{
+					printf("\t\t%s\n", buf);
+				}
+			} while (strcmp(buf, "over") != 0);
+		}
+		else if (strcmp(buf, "B") == 0)
 		{
-			recv(socket_fd, XZ, sizeof(LIAOT), 0);
-			//printf("%s\n", XZ->buf);
-			if(strcmp(XZ->buf, "over") == 0)
+			write(socket_fd, buf, sizeof(buf));
+			LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
+			while(1)
 			{
-				break;
-			}
-			else if(XZ->ice == 100)
-			{
-				break;
-			}
-			else
-			{
-				//printf("A%sA\n", XZ->buf);
-				//printf("YYYYY%dYYYY\n", XZ->zt);
-					char ch, B[50],beizhu[20];
-					printf("%s", XZ->buf);
-					printf("[Y] 同意  [N] 忽略\n");
-					printf("请输入你的选择:");
-					scanf("%s\n", &B);
-					//write(socket_fd, ch, sizeof(char));
-					if(strcmp(B, "Y") == 0)
-					{
-						if(XZ->zt == 0)
+				printf("\033c");
+				recv(socket_fd, XZ, sizeof(LIAOT), 0);
+				//printf("%s\n", XZ->buf);
+				if(strcmp(XZ->buf, "over") == 0)
+				{
+					break;
+				}
+				else if(XZ->ice == 100)
+				{
+					break;
+				}
+				else
+				{
+					//printf("A%sA\n", XZ->buf);
+					//printf("YYYYY%dYYYY\n", XZ->zt);
+						char ch, B[50],beizhu[20];
+						printf("\t\t%s\n", XZ->buf);
+						printf("\t\t[Y] 同意  [N] 忽略\n");
+						printf("\t\t请输入你的选择:");
+						setbuf(stdin, NULL);
+						scanf("%s", &B);
+						setbuf(stdin, NULL);
+						//write(socket_fd, ch, sizeof(char));
+						if(strcmp(B, "Y") == 0)
 						{
-							printf("请输入备注:");
-							scanf("%s", beizhu);
-							strncpy(XZ->buf, B, sizeof(B));
-							strncpy(XZ->beizhu, beizhu, sizeof(beizhu));
-							send(socket_fd, XZ, sizeof(LIAOT), 0);
-							memset(XZ, 0, sizeof(LIAOT));
-							recv(socket_fd, XZ, sizeof(LIAOT), 0);
-							if(strcmp(XZ->buf, "over") == 0)
+							if(XZ->zt == 0)
 							{
-								break;
+								printf("\n\t\t请输入备注:");
+								scanf("%s", beizhu);
+								strncpy(XZ->buf, B, sizeof(B));
+								strncpy(XZ->beizhu, beizhu, sizeof(beizhu));
+								send(socket_fd, XZ, sizeof(LIAOT), 0);
+								memset(XZ, 0, sizeof(LIAOT));
+								recv(socket_fd, XZ, sizeof(LIAOT), 0);
+								if(strcmp(XZ->buf, "over") == 0)
+								{
+									break;
+								}
+								printf("\t\t%s",XZ->buf);
+								memset(XZ, 0, sizeof(LIAOT));
 							}
-							printf("%s",XZ->buf);
-							memset(XZ, 0, sizeof(LIAOT));
+							else if(XZ->zt == 1)
+							{
+								strncpy(XZ->buf, B, sizeof(B));
+								send(socket_fd, XZ, sizeof(LIAOT), 0);
+								recv(socket_fd, XZ, sizeof(LIAOT), 0);
+								if(strcmp(XZ->buf, "over") == 0)
+								{
+									break;
+								}
+								printf("\t\t%s",XZ->buf);
+								memset(XZ, 0, sizeof(LIAOT));
+							}
 						}
-						else if(XZ->zt == 1)
+						else if(strcmp(B, "N") == 0)
 						{
 							strncpy(XZ->buf, B, sizeof(B));
 							send(socket_fd, XZ, sizeof(LIAOT), 0);
-							recv(socket_fd, XZ, sizeof(LIAOT), 0);
-							if(strcmp(XZ->buf, "over") == 0)
-							{
-								break;
-							}
-							printf("%s",XZ->buf);
-							memset(XZ, 0, sizeof(LIAOT));
 						}
-					}
-					else if(strcmp(B, "N") == 0)
-					{
-						strncpy(XZ->buf, B, sizeof(B));
-						send(socket_fd, XZ, sizeof(LIAOT), 0);
-					}
+				}
 			}
 		}
-		return 0;
-	}
-	else if (strcmp(buf, "R") == 0)
-	{
-		write(socket_fd, buf, sizeof(buf));
-		return 0;
-	}
-	else
-	{
-		printf("无此选项请重新输入！\n");
-	}
+		else if (strcmp(buf, "R") == 0)
+		{
+			write(socket_fd, buf, sizeof(buf));
+			return 0;
+		}
+		else
+		{
+			printf("\t\t无此选项请重新输入！\n");
+		}
+		printf("\t\t请输入enter继续!!!\n");
+		setbuf(stdin, NULL);
+		getchar();
+		setbuf(stdout, NULL);
 	
 	}while(1);
 
@@ -858,19 +972,21 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 	do
 	{
 		//printf("%d\n", ret);
+		printf("\033c");
 		int ic;
 		LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
 		memset(XZ, 0, sizeof(LIAOT));
-		printf("**********************************************\n");
-		printf("******************0 退出***********************\n");
-		printf("**************1 好友的添加，删除，查询************\n");
-		printf("******************2 查看好友列表****************\n");
-		printf("*****************3 查看好友状态*****************\n");
-		printf("******************4 查看聊天记录****************\n");
-		printf("****************5 屏蔽好友消息******************\n");
-		printf("请输入要选择的功能：");
+		get_XX(socket_fd);
+		printf("\t\t**********************************************\n");
+		printf("\t\t******************0 退出***********************\n");
+		printf("\t\t**************1 好友的添加，删除，查询************\n");
+		printf("\t\t******************2 查看好友列表****************\n");
+		printf("\t\t*****************3 查看好友状态*****************\n");
+		printf("\t\t******************4 查看聊天记录****************\n");
+		printf("\t\t****************5 屏蔽好友消息******************\n");
+		printf("\t\t请输入要选择的功能：");
 		scanf("%d", &ic);
-		
+		printf("\033c");
 		if(ic == 1)      //添加,删除，查询好友
 		{
 			YY->ice_2 = 21;
@@ -878,21 +994,22 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 			//send(socket_fd, XZ, sizeof(LIAOT), 0);
 			char buf[50];
 			char ch;
-			printf("A 添加好友\n");
-			printf("B 删除好友\n");
-			printf("C 查询好友\n");
-			printf("请输入你的选择:");
+			printf("\t\tA 添加好友\n");
+			printf("\t\tB 删除好友\n");
+			printf("\t\tC 查询好友\n");
+			printf("\t\t请输入你的选择:");
 			scanf("%s", buf);
 			//int ret = write(socket_fd,buf, sizeof(buf));
 			//strncpy(XZ->buf, buf, sizeof(XZ->buf));
 			//printf("%d\n", ret);
+			printf("\033c");
 			if(strcmp(buf, "A") == 0)
         	{
 				YY->ice_3 = 211;
-				printf("请输入要添加好友的ID：");
+				printf("\t\t请输入要添加好友的ID：");
 				scanf("%d",&id);
 				YY->y_id = id;
-				printf("请输入备注：");
+				printf("\t\t请输入备注：");
 				scanf("%s",&beizhu);
 				strncpy(YY->beizhu, beizhu, sizeof(beizhu));
 				//printf("size = %d\nid = %d\n", sizeof(LIAOT), XZ->id);
@@ -900,7 +1017,8 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 				//printf("%d\n", ret);
 				ret = read(socket_fd,buf, sizeof(buf));
 				//printf("%d\n", ret);
-				printf("%s",buf);
+				printf("\t\t%s",buf);
+				
         	}
     	    else if(strcmp(buf, "B") == 0)
         	{
@@ -908,12 +1026,13 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 				do
 				{
 					int i;
-					printf("************************************\n");
-					printf("**********0 退出 ********************\n");
-					printf("**********1 根据ID 删除 **************\n");
-					printf("**********2 根据备注删除 **************\n");
-					printf("请输入你的选择：");
-					scanf("%d", &i);		
+					printf("\t\t************************************\n");
+					printf("\t\t**********0 退出 ********************\n");
+					printf("\t\t**********1 根据ID 删除 **************\n");
+					printf("\t\t**********2 根据备注删除 **************\n");
+					printf("\t\t请输入你的选择：");
+					scanf("%d", &i);
+					printf("\033c");		
 					YY->zt = i;
 					if(i == 0)
 					{
@@ -922,22 +1041,26 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 					}
 					else if(i == 1)
 					{
-						printf("请输入你要删除的好友的ID：");
+						printf("\t\t请输入你要删除的好友的ID：");
 						scanf("%d",&id);
 						YY->y_id = id;
 						ret = send(socket_fd, YY, sizeof(XINXI),0);
 						ret = read(socket_fd, buf, sizeof(buf));
-						printf("%s",buf);
+						printf("\t\t%s",buf);
 					}
 					else if(i == 2)
 					{
-						printf("请输入你要删除好友的备注：");
+						printf("\t\t请输入你要删除好友的备注：");
 						scanf("%s",beizhu);
 						strncpy(XZ->beizhu,beizhu,sizeof(beizhu));
 						ret = send(socket_fd, YY, sizeof(XINXI),0);
 						ret = read(socket_fd, buf, sizeof(buf));
-						printf("%s",buf);
+						printf("\t\t%s",buf);
 					}
+					printf("\t\t请输入enter继续!!!\n");
+					setbuf(stdin, NULL);
+					getchar();
+					setbuf(stdin, NULL);
 				}while(1);
     	    }
     	    else if(strcmp(buf, "C") == 0)
@@ -946,12 +1069,13 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 				do
 				{
 					int i;
-					printf("************************************\n");
-					printf("**********0 退出 ********************\n");
-					printf("**********1 根据ID查询备注 **************\n");
-					printf("**********2 根据备注查询ID **************\n");
-					printf("请输入你的选择：");
+					printf("\t\t************************************\n");
+					printf("\t\t**********0 退出 ********************\n");
+					printf("\t\t**********1 根据ID查询备注 **************\n");
+					printf("\t\t**********2 根据备注查询ID **************\n");
+					printf("\t\t请输入你的选择：");
 					scanf("%d", &i);
+					printf("\033c");
 					YY->zt = i;
 					if(i == 0)
 					{
@@ -960,22 +1084,26 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 					}		
 					else if(i == 1)
 					{
-						printf("请输入好友的ID：");
+						printf("\t\t请输入好友的ID：");
 						scanf("%d", &id);
 						YY->y_id = id;
 						ret = send(socket_fd, YY, sizeof(XINXI),0);
 						ret = read(socket_fd, buf, sizeof(buf));
-						printf("%s",buf);
+						printf("\t\t%s",buf);
 					}
 					else if(i == 2)
 					{
-						printf("请输入好友备注：");
+						printf("\t\t请输入好友备注：");
 						scanf("%s", beizhu);
 						strncpy(YY->beizhu, beizhu, sizeof(beizhu));
 						ret = send(socket_fd, YY, sizeof(XINXI), 0);
 						ret = read(socket_fd, buf, sizeof(buf));
-						printf("%s",buf);
+						printf("\t\t%s",buf);
 					}
+					printf("\t\t请输入enter继续!!!\n");
+					setbuf(stdin, NULL);
+					getchar();
+					setbuf(stdin, NULL);
 				} while (1);
 				
 
@@ -1006,37 +1134,39 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 				read(socket_fd,buf, sizeof(buf));
 				if(strcmp(buf,"over") != 0)
 				{
-					printf("%s\n",buf);
+					printf("\t\t%s\n",buf);
 				}
 			} while (strcmp(buf, "over") != 0);
+
 		}
 		else if(ic == 3)        //查看好友状态
 		{
 			YY->ice_2 = 23;
 			YY->m_id  = M_ID;
-			printf("请输入要查询好友的ID：");
+			printf("\t\t请输入要查询好友的ID：");
 			scanf("%d", &id);
 			YY->y_id = id;
 			send(socket_fd, YY, sizeof(XINXI), 0);
 			recv(socket_fd, XZ, sizeof(LIAOT), 0);
-			if(XZ->zt)
+			//printf("XZ->zt = %d\n", XZ->zt);
+			if(XZ->zt == 1)
 			{
-				printf("该好友在线！\n");
+				printf("\t\t该好友在线！\n");
 			}
 			else if(XZ->zt == 0)
 			{
-				printf("该好友不在线!\n");
+				printf("\t\t该好友不在线!\n");
 			}
 			else if(XZ->zt == -1)
 			{
-				printf("你无此ID的好友！\n");
+				printf("\t\t你无此ID的好友！\n");
 			}
 		}
 		else if(ic == 4)        //查看聊天记录
 		{
 			YY->ice_2 = 24;
 			YY->m_id  = M_ID;
-			printf("请输入你要查询好友的ID：");
+			printf("\t\t请输入你要查询好友的ID：");
 			scanf("%d", &id);
 			YY->y_id = id;
 			send(socket_fd, YY, sizeof(XINXI), 0);
@@ -1047,11 +1177,11 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 				{
 					if(XZ->id == id)      //从好友处发来的信息
 					{
-						printf("%s : %s\n", XZ->beizhu, XZ->xinxi);
+						printf("\t\033[34m%s : %s\033[0m\n\n", XZ->beizhu, XZ->xinxi);
 					}
 					else
 					{
-						printf("MINE ：%s\n", XZ->xinxi);
+						printf("\t\033[31mMINE ：%s\033[0m\n\n", XZ->xinxi);
 					}
 				}
 			} while (strcmp(XZ->xinxi, "over") != 0);
@@ -1061,22 +1191,43 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 		{
 			YY->ice_2 = 25;
 			YY->m_id  = M_ID;
-			printf("请输入你要屏蔽的好友ID:");
-			scanf("%d",&id);
-			YY->y_id = id;
-			send(socket_fd, YY, sizeof(XINXI),0);
-			recv(socket_fd, XZ, sizeof(LIAOT), 0);
-			if(XZ->zt == -1)
+			int i;
+			while(1)
 			{
-				printf("你无此ID的好友！\n");
-			}
-			else if(XZ->zt == 0)
-			{
-				printf("屏蔽失败！\n");
-			}
-			else
-			{
-				printf("屏蔽成功!\n");
+				printf("\033c");
+				printf("\t\t**************1 屏蔽好友信息***************\n");
+				printf("\t\t**************2 取消屏蔽 ******************\n");
+				printf("\t\t**************0 退出 **********************\n");
+				printf("\t\t请输入你的选择：");
+				scanf("%d", &i);
+				if(i == 0)
+				{
+					break;
+				}
+				else if(i == 1)
+				{
+					YY->ice_3 = 251;
+					printf("\t\t请输入你要屏蔽的好友ID:");
+					scanf("%d",&id);
+					YY->y_id = id;
+					send(socket_fd, YY, sizeof(XINXI),0);
+					read(socket_fd, buf, sizeof(buf));
+					printf("\t\t%s\n",buf);
+				}
+				else if(i == 2)
+				{
+					YY->ice_3 = 252;
+					printf("\t\t请输入你要取消屏蔽的好友ID:");
+					scanf("%d",&id);
+					YY->y_id = id;
+					send(socket_fd, YY, sizeof(XINXI),0);
+					read(socket_fd, buf, sizeof(buf));
+					printf("\t\t%s\n",buf);
+				}
+				printf("\t\t请输入任意键继续！！！\n");
+				setbuf(stdin, NULL);
+				getchar();
+				setbuf(stdout, NULL);
 			}
 		}
 		else if(ic == 0)
@@ -1086,21 +1237,25 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 		}
 		else
 		{
-			printf("无此功能请重新选择!!!!!!!!!!!!\n");
+			printf("\t\t无此功能请重新选择!!!!!!!!!!!!\n");
 		}
+		printf("\t\t请输入enter继续!!!\n");
+		setbuf(stdin, NULL);
+		getchar();
+		setbuf(stdin, NULL);
 	} while (1);
 } 
 
 void C_denn(XINXI *YY, int socket_fd)
 {
 	int I;
-	char P[16],buf[50];
+	char *P,buf[50];
 	do
 	{
-		printf("ID:");
+		printf("\033c");
+		printf("\t\tID:");
 		scanf("%d",&I);
-		printf("Password:");
-		scanf("%s",P);
+		P = getpass("\t\t密码：");
 		YY->m_id = I;
 		YY->zt = 1;
 		strncpy(YY->password, P, 16);
@@ -1109,9 +1264,14 @@ void C_denn(XINXI *YY, int socket_fd)
 		ret = read(socket_fd,buf, sizeof(buf));
 		if(ret)
 		{
-			printf("%s\n",buf);
+			printf("\t\t%s\n",buf);
 		}
+		printf("\t\t请输入enter继续!!!\n");
+		setbuf(stdin, NULL);
+		getchar();
+		setbuf(stdin, NULL);
 	}while(strcmp(buf,"登陆成功") != 0);
+	//printf("AAAA\n");
 }
 
 void C_get(int socket_fd)
@@ -1139,7 +1299,7 @@ void C_get(int socket_fd)
 				char buf[1024]={0};
 				//read(socket_fd,buf,sizeof(buf));
 				recv(Socket_fd, XZ, sizeof(LIAOT), 0);
-				printf("%s : %s\n", XZ->beizhu, XZ->xinxi);
+				printf("\t\t%s : %s\n", XZ->beizhu, XZ->xinxi);
 				//printf("MINE: ");
 			}
 		}
@@ -1152,6 +1312,7 @@ void C_get(int socket_fd)
 void *thread(void *arg)
 {
 	int n;
+	char A[300];
 	LIAOT XZ;
 	XINXI YY;
 	do
@@ -1173,17 +1334,16 @@ void *thread(void *arg)
 		{
 			for(int i = 0;i<n;i++)
 			{
-				printf("\b\b\b\b\b\b\n");
+				printf("\b\b\b\b\b\b                 \n");
 				char buf[1024]={0};
 				//read(socket_fd,buf,sizeof(buf));
 				recv(Socket_fd, &XZ, sizeof(LIAOT), 0);
-				printf("%s : %s\n", XZ.beizhu, XZ.xinxi);
+				sprintf(A, "\t\033[34m%s : %s\n\033[0m", XZ.beizhu, XZ.xinxi);
+				printf("%s", A);
 			}
+			printf("\t\033[31mMINE :");
 		}
-	} while (1);
-	//printf("HHHHHHHHHHHHHHH\n");
-	//return ;
-
+	} while (M == 1);       //退出线程
 }
 
 void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
@@ -1193,11 +1353,13 @@ void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
 	char beizhu[20],buf[50];
 
 		LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
-		printf("**************************************\n");
-		printf("*************0 退出 *******************\n");
-		printf("*************1 与好友聊天 **************\n");
-		printf("请输入你的选择：");
+		get_XX(socket_fd);
+		printf("\t\t**************************************\n");
+		printf("\t\t*************0 退出 *******************\n");
+		printf("\t\t*************1 与好友聊天 **************\n");
+		printf("\t\t请输入你的选择：");
 		scanf("%d", &ic);
+		printf("\033c");
 		if(ic == 0)
 		{
 			return;
@@ -1207,33 +1369,33 @@ void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
 			YY->ice_2 = 31;
 			YY->ice_4 = 0;
 			YY->m_id  = M_ID;
-			printf("请输入好友的ID:");
+			printf("\t\t请输入好友的ID:");
 			scanf("%d",&id);
 			YY->y_id = id;
 			send(socket_fd,YY, sizeof(XINXI), 0);
 			read(socket_fd,buf, sizeof(buf));
 			if(strcmp(buf, "OK") != 0)
 			{
-				printf("%s",buf);
+				printf("\t\t%s",buf);
 			}
 			//fflush(stdin);
 			Y_ID = id;
 			
 			//pthread_mutex_init(&lock, NULL);                   //初始化锁
     		//pthread_cond_init(&cond, NULL);                    //初始化条件变量
-
+			M = 1;
 			if(pthread_create(&thid, NULL, thread, NULL) != 0)
 			{
 				//创建失败
-				printf("创建线程失败！\n");
+				printf("\t\t创建线程失败！\n");
 				return ;
 			}
 			else
 			{
-				printf("创建成功！\n");
+				//printf("\t\t创建成功！\n");
 			}
 
-			write(STDOUT_FILENO, "MINE :", 7);
+			printf("\t\033[31mMINE :");
 
 			do{
 
@@ -1273,21 +1435,36 @@ void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
 					if(FD_ISSET(0,&fds))
 					{
 						N = 1;
-						char buf[200] = {0};
-						scanf("%s",buf);
-						strncpy(YY->buf, buf, sizeof(YY->buf));
+						int i = 0;
+						char Buf[200] = {0},ch;
+						setbuf(stdin, NULL);
+						fgets(Buf,200,stdin);
+						setbuf(stdin, NULL);
+						do
+						{
+							scanf("%c", &ch);
+							if(ch != '\n')
+							{
+								Buf[i] = ch;
+								i++;
+							}
+						}while(ch != '\n');
 						YY->ice_4 = 777;
 						YY->m_id  = M_ID;
+						strncpy(YY->buf, Buf, sizeof(Buf));
 						//printf("buf: %s\n", YY->buf);
 						//printf("ice_1 = %d\n",YY->ice_1);
-						ret = send(socket_fd, YY, sizeof(XINXI), 0);
-
-						if(strcmp(buf, "exit") == 0)
+						if(strcmp(YY->buf, "exit") == 0)
 						{
+							printf("\033[0m\n");
+							M = 0;
 							pthread_join(thid, NULL);   //销毁线程
-							break;
+							return ;
 						}
-						printf("\nMINE: ");
+						ret = send(socket_fd, YY, sizeof(XINXI), 0);
+						//printf("buf = %sA\n", buf);
+
+						printf("\t\033[31mMINE: ");
 						N = 0;
 					}
 				}
@@ -1303,15 +1480,16 @@ void C_zhuce(XINXI *YY, int socket_fd)
 	char P[16],buf[50],name[20],qu[200],an[100],hylb[20];
 	do
 	{
-		printf("ID:");
+		printf("\033c");
+		printf("\t\tID:");
 		scanf("%d",&I);
-		printf("Password:");
+		printf("\t\tPassword:");
 		scanf("%s",P);
-		printf("Name: ");
+		printf("\t\tName: ");
 		scanf("%s",name);
-		printf("请设置密保问题：");
+		printf("\t\t请设置密保问题：");
 		scanf("%s",qu);
-		printf("请输入答案：");
+		printf("\t\t请输入答案：");
 		scanf("%s",an);
 		YY->m_id = I;
 		sprintf(hylb, "%shylb", name);
@@ -1322,7 +1500,11 @@ void C_zhuce(XINXI *YY, int socket_fd)
 		strncpy(YY->hylb, hylb, sizeof(hylb));          //好友列表，以name为mysql—table名
 		send(socket_fd, YY, sizeof(XINXI),0);
 		read(socket_fd,buf, sizeof(buf));
-		printf("%s\n",buf);
+		printf("\t\t%s\n",buf);
+		printf("\t\t请输入enter继续!!!\n");
+		setbuf(stdin, NULL);
+		getchar();
+		setbuf(stdin, NULL);
 	}while (strcmp(buf,"注册成功") != 0);
 }
 
@@ -1332,18 +1514,23 @@ void C_zhaohui(XINXI *YY, int socket_fd)
 	char an[100],qu[200],buf[50];
 	do
 	{
-		printf("请输入你的id：");
+		printf("\033c");
+		printf("\t\t请输入你的id：");
 		scanf("%d",&I);
 		YY->m_id = I;
 		send(socket_fd, YY, sizeof(XINXI),0);      //将ID发送到服务器
 		read(socket_fd, qu, sizeof(qu));          //读取密保问题
-		printf("%s\n", qu);
+		printf("\t\t%s\n", qu);
 		scanf("%s",an);                           //回答问题
 		strncpy(YY->an, an, sizeof(an));
 		YY->ice_3 = 131;
 		send(socket_fd, YY, sizeof(XINXI),0);       //将答案发送到服务端
 		read(socket_fd, buf, sizeof(buf));
-		printf("%s\n", buf);
+		printf("\t\t%s\n", buf);
+		printf("\t\t请输入enter继续!!!\n");
+		setbuf(stdin, NULL);
+		getchar();
+		setbuf(stdin, NULL);
 	}while(strcmp(buf, "答案错误") == 0);
 }
 
@@ -1352,12 +1539,13 @@ void face(XINXI *YY)
 	int n;
 	while(1)	
     {
-		printf("/*******************************/\n");
-		printf("/**************1 登陆**************/\n");
-    	printf("/**************2 注册**************/\n");
-	    printf("/************3 找回密码*************/\n");
-		printf("/************0 退出程序*************/\n");
-	    printf("请选择：");
+		printf("\033c");
+		printf("\t\t/*******************************/\n");
+		printf("\t\t/**************1 登陆**************/\n");
+    	printf("\t\t/**************2 注册**************/\n");
+	    printf("\t\t/************3 找回密码*************/\n");
+		printf("\t\t/************0 退出程序*************/\n");
+	    printf("\t\t请选择：");
 		scanf("%d",&n);
 		if(n == 0)
 		{
