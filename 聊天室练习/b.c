@@ -406,22 +406,25 @@ void *thread_g(void *arg)
 		YY.q_id = Q_ID;
 		send(Socket_fd, &YY, sizeof(XINXI), 0);
 
-		while(1)
+		recv(Socket_fd, &n, sizeof(n), 0);
+		//printf("n = %d\n", n);
+		while(n > 0)
 		{
 			recv(Socket_fd, &XZ, sizeof(LIAOT), 0);
 			//printf("XZ->zt = %d\n",XZ.zt);
 			if(XZ.zt > 0)
 			{
-				printf("\b\b\b\b\b\b\n");
-				printf("\t\t%s : %s\n", XZ.name, XZ.xinxi);
-				printf("\t\tMINE :");
+				printf("\b\b\b\b\b\b                          \n");
+				printf("\t\t\033[34m%s : %s\n\033[0m", XZ.name, XZ.xinxi);
 			}
-			else if(XZ.zt == 0)
+			--n;
+			if(n == 0)
 			{
-				break;
+				printf("\t\t\033[31mMINE :");
 			}
 		}
-	} while (M == 1);
+		
+	}while(M == 1);
 }
 
 void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
@@ -474,11 +477,11 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 			}
 			else
 			{
-				//printf("\t\t创建成功！\n");
+				printf("\t\t创建成功！\n");
 			}
 
-			write(STDOUT_FILENO, "\t\tMINE :", 7);
-
+			printf("\t\t\033[31mMINE :");
+			setbuf(stdin, NULL);
 			do{
 				//要监视的描述符集合
 				fd_set fds;
@@ -500,21 +503,37 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 					if(FD_ISSET(0,&fds))
 					{
 						N = 1;
-						char buf[200] = {0};
-						scanf("%s",buf);
-						strncpy(YY->buf, buf, sizeof(YY->buf));
+						int i = 0;
+						char Buf[200] = {0},ch;
+						setbuf(stdin, NULL);
+						fgets(Buf,200,stdin);
+						setbuf(stdin, NULL);
+						do
+						{
+							scanf("%c", &ch);
+							if(ch != '\n')
+							{
+								Buf[i] = ch;
+								i++;
+							}
+						}while(ch != '\n');
 						YY->ice_4 = 888;
+						YY->m_id  = M_ID;
+						strncpy(YY->buf, Buf, sizeof(Buf));
 						//printf("buf: %s\n", YY->buf);
 						//printf("ice_1 = %d\n",YY->ice_1);
-						ret = send(socket_fd, YY, sizeof(XINXI), 0);
-
-						if(strcmp(buf, "exit") == 0)
+						if(strcmp(YY->buf, "exit") == 0)
 						{
+							printf("杀死线程\n");
+							printf("\033[0m\n");
 							M = 0;
 							pthread_join(thid, NULL);   //销毁线程
 							return ;
 						}
-						printf("\n\t\tMINE: ");
+						ret = send(socket_fd, YY, sizeof(XINXI), 0);
+						//printf("buf = %sA\n", buf);
+						setbuf(stdin, NULL);
+						printf("\t\t\033[31mMINE: ");
 						N = 0;
 					}
 				}
@@ -874,6 +893,7 @@ int C_TongZ(XINXI *YY, DENN *XX, int socket_fd)
 					printf("\t\t%s\n", buf);
 				}
 			} while (strcmp(buf, "over") != 0);
+			break;
 		}
 		else if (strcmp(buf, "B") == 0)
 		{
@@ -942,6 +962,7 @@ int C_TongZ(XINXI *YY, DENN *XX, int socket_fd)
 						}
 				}
 			}
+			break;
 		}
 		else if (strcmp(buf, "R") == 0)
 		{
@@ -956,9 +977,14 @@ int C_TongZ(XINXI *YY, DENN *XX, int socket_fd)
 		setbuf(stdin, NULL);
 		getchar();
 		setbuf(stdout, NULL);
+		return 0;
 	
 	}while(1);
-
+	printf("\t\t请输入enter继续!!!\n");
+	setbuf(stdin, NULL);
+	getchar();
+	setbuf(stdout, NULL);
+	return 0;
 }
 
 void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
