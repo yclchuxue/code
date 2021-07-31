@@ -1512,7 +1512,7 @@ void G_send(XINXI *YY, int sfd)
 {
     //printf("AAA\n");
     char A[100];
-    int day, time_1, ret, sum = 0;
+    int day, time_1, ret, sum = 0, i;
     sprintf(A, "select day from %scylb where id = %d", getgroupname_from_id(YY->q_id), YY->m_id);
     ret = mysql_query(conn,A);
     //printf("A = %s\nret = %d\nYY->m_id = %d\nYY->q_id = %d\n", A, ret, YY->m_id, YY->q_id);
@@ -1537,11 +1537,35 @@ void G_send(XINXI *YY, int sfd)
     }
     mysql_free_result(res_ptr);
 
+    sum = 0;
+
+    sprintf(A, "select * from %sjl where day = %d and time > %d and id != %d", getgroupname_from_id(YY->q_id), day, time_1, YY->m_id);
+    ret = mysql_query(conn,A);
+    //printf("A = %s\nret = %d\n", A, ret);
+    res_ptr = mysql_store_result(conn);
+    while(res_row = mysql_fetch_row(res_ptr))
+    {
+        sum++;
+    }
+    mysql_free_result(res_ptr);
+
+    sprintf(A, "select * from %sjl where day > %d and id != %d", getgroupname_from_id(YY->q_id),day,YY->m_id);
+    ret = mysql_query(conn,A);
+    //printf("A = %s\nret = %d\n", A, ret);
+    res_ptr = mysql_store_result(conn);
+    while(res_row = mysql_fetch_row(res_ptr))
+    {
+        sum++;
+    }
+    mysql_free_result(res_ptr);
+    printf("sum = %d\n",sum);
+    send(sfd, &sum, sizeof(sum), 0);
+
 
     LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
     sprintf(A, "select * from %sjl where day = %d and time > %d and id != %d", getgroupname_from_id(YY->q_id), day, time_1, YY->m_id);
     ret = mysql_query(conn,A);
-    //printf("A = %s\nret = %d\n", A, ret);
+    printf("A = %s\nret = %d\n", A, ret);
     res_ptr = mysql_store_result(conn);
     res_row = mysql_fetch_row(res_ptr);
     mysql_free_result(res_ptr);
@@ -1550,7 +1574,7 @@ void G_send(XINXI *YY, int sfd)
             //有未读信息
         sprintf(A, "select * from %sjl where day = %d and time > %d and id != %d", getgroupname_from_id(YY->q_id), day, time_1, YY->m_id);
         ret = mysql_query(conn,A);
-        //printf("A = %s\nret = %d\n", A, ret);
+        printf("A = %s\nret = %d\n", A, ret);
         res_ptr = mysql_store_result(conn);
         //int field = mysql_num_fields(res_ptr);
         while(res_row = mysql_fetch_row(res_ptr))
@@ -1581,18 +1605,18 @@ void G_send(XINXI *YY, int sfd)
     }
     sprintf(A, "select * from %sjl where day > %d and id != %d", getgroupname_from_id(YY->q_id),day,YY->m_id);
     ret = mysql_query(conn,A);
-    //printf("A = %s\nret = %d\n", A, ret);
+    printf("A = %s\nret = %d\n", A, ret);
     res_ptr = mysql_store_result(conn);
     res_row = mysql_fetch_row(res_ptr);
     mysql_free_result(res_ptr);
-    if(res_row == NULL)
+    if(res_row != NULL)
     {
         
         XZ->zt = 1; 
         //有未读信息
         sprintf(A, "select * from %sjl where day > %d and id != %d", getgroupname_from_id(YY->q_id),day,YY->m_id);
         ret = mysql_query(conn,A);
-        //printf("A = %s\nret = %d\n", A, ret);
+        printf("A = %s\nret = %d\n", A, ret);
         res_ptr = mysql_store_result(conn);
         while(res_row = mysql_fetch_row(res_ptr))
         {
@@ -1604,18 +1628,18 @@ void G_send(XINXI *YY, int sfd)
             time_1 = atoi(res_row[4]);    
             sprintf(A, "update %scylb set day = %d where id = %d", getgroupname_from_id(YY->q_id), day, YY->m_id);
             ret_1 = mysql_query(conn,A);
-            //printf("A = %s\nret = %d\n", A, ret);
+            printf("A = %s\nret = %d\n", A, ret);
             sprintf(A, "update %scylb set time = %d where id = %d", getgroupname_from_id(YY->q_id), time_1, YY->m_id);
             ret_2 = mysql_query(conn,A);
-            //printf("A = %s\nret = %d\n", A, ret);
+            printf("A = %s\nret = %d\n", A, ret);
             if(ret_1 == 0 && ret_2 == 0)
             {
                 send(sfd, XZ, sizeof(LIAOT), 0);
             }
         }
     }
-    XZ->zt = 0;
-    send(sfd, XZ, sizeof(LIAOT), 0);
+    //XZ->zt = 0;
+    //send(sfd, XZ, sizeof(LIAOT), 0);
 }
 
 void G_get(XINXI *YY, int sfd)
@@ -1773,11 +1797,10 @@ int TongZ(XINXI *YY, int sfd)
             }
             sprintf(B, "over");
             write(sfd, B, sizeof(B));
-            mysql_free_result(res_ptr);
         }
         else if(strcmp(B, "B") == 0)
         {
-            //printf("AAA\n");
+            printf("AAA\n");
             sprintf(A, "select * from box where end_id = %d and ice = 0", YY->m_id);
             ret = mysql_query(conn,A);
             MYSQL_RES *res_ptr;
