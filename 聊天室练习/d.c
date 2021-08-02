@@ -1,21 +1,21 @@
-/*************************************************************
- * 客户端       thread--->epoll----->accept----->eopll_in
- * ***********************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
+#include <mariadb/mysql.h>
 #include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/epoll.h>
+#include <errno.h>
+#include <arpa/inet.h>
+#include <pthread.h>
+#include <assert.h>
 #include <libgen.h>//basename():从路径中获取文件名及后缀
 
-pthread_mutex_t lock;
-pthread_cond_t cond;
+MYSQL *conn;
+#define OPEN_MAX 1024
 
 typedef struct xinxi{
 	int ice_1;              //功能选择
@@ -53,13 +53,21 @@ typedef struct liaot{
 	int ice;
 	int id;
 	int zt;
-	char name[20];
+    char name[20];
 	char qu[200];
 	char an[100];
 	char buf[50];
 	char beizhu[20];
     char xinxi[200];
 }LIAOT;
+
+typedef struct E_list{
+    int index;
+    int efd;
+    int sum;
+    struct epoll_event tep, ep[OPEN_MAX];
+    struct E_list *next;
+}E_LIST;
 
 int Socket_fd, Y_ID, M_ID, Q_ID, M;
 
@@ -86,6 +94,8 @@ void C_document(XINXI *YY, int socket_fd);
 void get_XX(int socket_fd);
 
 void *thread(void *arg);
+
+void *thread_g(void *arg);
 
 void face(XINXI *YY);
 
@@ -116,7 +126,7 @@ int main()
 	struct sockaddr_in server_addr = {0};//服务器的地址信息
 	server_addr.sin_family = AF_INET;//IPv4协议
 	server_addr.sin_port = htons(port);//服务器端口号
-	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");         //设置服务器IP
+	server_addr.sin_addr.s_addr = inet_addr("192.168.30.238");         //设置服务器IP
 	int ret = connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));       //连接服务器
 	if(ret == -1)
 	{
@@ -167,6 +177,7 @@ int main()
 		do{                                                  //************************************************
 			memset(&YY, 0, sizeof(XINXI));
 			int ice;
+			setbuf(stdin, NULL);
 			printf("\033c");
 			get_XX(socket_fd);
 			printf("\t\t*************************************\n");
@@ -267,7 +278,7 @@ void C_document(XINXI *YY, int socket_fd)
 	int n, fd, ret, id;
 	char file_len[16], file_name[128],file_path[128],sign[10];
 	char buf[1024];
-
+	setbuf(stdin, NULL);
 	printf("\t\t********************1 文件发送 *********************\n");
 	printf("\t\t********************2 文件接收 *********************\n");
 	printf("\t\t********************0 退出     *********************\n");
@@ -282,6 +293,7 @@ void C_document(XINXI *YY, int socket_fd)
 	}
 	else if(n == 1)     //文件发送
 	{
+		setbuf(stdin, NULL);
 		printf("\t\t请输入文件：");
 		scanf("%s", &file_path);
 		memset(file_name, 0, sizeof(file_name));
@@ -480,7 +492,7 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 			}
 			else
 			{
-				printf("\t\t创建成功！\n");
+				//printf("\t\t创建成功！\n");
 			}
 
 			printf("\t\t\033[31mMINE :");
@@ -527,7 +539,7 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 						//printf("ice_1 = %d\n",YY->ice_1);
 						if(strcmp(YY->buf, "exit") == 0)
 						{
-							printf("杀死线程\n");
+							//printf("杀死线程\n");
 							printf("\033[0m\n");
 							M = 0;
 							pthread_join(thid, NULL);   //销毁线程
@@ -553,6 +565,7 @@ void C_group(XINXI *YY, DENN *XX, int socket_fd)
 	LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
 	do
 	{
+		setbuf(stdin, NULL);
 		printf("\033c");
 		get_XX(socket_fd);
 		printf("\t\t*******************************************\n");
@@ -905,6 +918,7 @@ int C_TongZ(XINXI *YY, DENN *XX, int socket_fd)
 			while(1)
 			{
 				printf("\033c");
+				setbuf(stdin, NULL);
 				recv(socket_fd, XZ, sizeof(LIAOT), 0);
 				//printf("%s\n", XZ->buf);
 				if(strcmp(XZ->buf, "over") == 0)
@@ -1000,6 +1014,7 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 		//printf("%d\n", ret);
 		printf("\033c");
 		int ic;
+		setbuf(stdin, NULL);
 		LIAOT *XZ = (LIAOT*)malloc(sizeof(LIAOT));
 		memset(XZ, 0, sizeof(LIAOT));
 		get_XX(socket_fd);
@@ -1052,6 +1067,7 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 				do
 				{
 					int i;
+					setbuf(stdin, NULL);
 					printf("\t\t************************************\n");
 					printf("\t\t**********0 退出 ********************\n");
 					printf("\t\t**********1 根据ID 删除 **************\n");
@@ -1095,6 +1111,7 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 				do
 				{
 					int i;
+					setbuf(stdin, NULL);
 					printf("\t\t************************************\n");
 					printf("\t\t**********0 退出 ********************\n");
 					printf("\t\t**********1 根据ID查询备注 **************\n");
@@ -1198,6 +1215,7 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 			send(socket_fd, YY, sizeof(XINXI), 0);
 			do
 			{
+				setbuf(stdin, NULL);
 				recv(socket_fd,XZ, sizeof(LIAOT), 0);
 				if(strcmp(XZ->xinxi, "over") != 0)
 				{
@@ -1220,6 +1238,7 @@ void C_haoy(XINXI *YY, DENN *XX, int socket_fd)
 			int i;
 			while(1)
 			{
+				setbuf(stdin, NULL);
 				printf("\033c");
 				printf("\t\t**************1 屏蔽好友信息***************\n");
 				printf("\t\t**************2 取消屏蔽 ******************\n");
@@ -1278,6 +1297,7 @@ void C_denn(XINXI *YY, int socket_fd)
 	char *P,buf[50];
 	do
 	{
+		setbuf(stdin, NULL);
 		printf("\033c");
 		printf("\t\tID:");
 		scanf("%d",&I);
@@ -1506,6 +1526,7 @@ void C_zhuce(XINXI *YY, int socket_fd)
 	char P[16],buf[50],name[20],qu[200],an[100],hylb[20];
 	do
 	{
+		setbuf(stdin, NULL);
 		printf("\033c");
 		printf("\t\tID:");
 		scanf("%d",&I);
@@ -1538,8 +1559,9 @@ void C_zhaohui(XINXI *YY, int socket_fd)
 {
 	int I;
 	char an[100],qu[200],buf[50];
-	do
-	{
+	//do
+	//{
+		setbuf(stdin, NULL);
 		printf("\033c");
 		printf("\t\t请输入你的id：");
 		scanf("%d",&I);
@@ -1547,7 +1569,10 @@ void C_zhaohui(XINXI *YY, int socket_fd)
 		send(socket_fd, YY, sizeof(XINXI),0);      //将ID发送到服务器
 		read(socket_fd, qu, sizeof(qu));          //读取密保问题
 		printf("\t\t%s\n", qu);
-		scanf("%s",an);                           //回答问题
+		printf("\t\t答案:");
+		setbuf(stdin, NULL);
+		scanf("%s",an);     
+		setbuf(stdin, NULL);                      //回答问题
 		strncpy(YY->an, an, sizeof(an));
 		YY->ice_3 = 131;
 		send(socket_fd, YY, sizeof(XINXI),0);       //将答案发送到服务端
@@ -1557,7 +1582,7 @@ void C_zhaohui(XINXI *YY, int socket_fd)
 		setbuf(stdin, NULL);
 		getchar();
 		setbuf(stdin, NULL);
-	}while(strcmp(buf, "答案错误") == 0);
+	//}while(strcmp(buf, "答案错误") == 0);
 }
 
 void face(XINXI *YY)
@@ -1565,6 +1590,7 @@ void face(XINXI *YY)
 	int n;
 	while(1)	
     {
+		setbuf(stdin, NULL);
 		printf("\033c");
 		printf("\t\t/*******************************/\n");
 		printf("\t\t/**************1 登陆**************/\n");
