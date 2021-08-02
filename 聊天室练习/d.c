@@ -250,10 +250,6 @@ int main()
 	return 0;
 }
 
-
-
-#include "cli.h"
-
 void get_XX(int socket_fd)
 {
 	XINXI YY;
@@ -358,6 +354,11 @@ void C_document(XINXI *YY, int socket_fd)
 		read(socket_fd, &sum, sizeof(int));
 		printf("\t\t有%d份文件需要接收！！！\n", sum);
 
+		if(sum == 0)
+		{
+			return ;
+		}
+
 		for(i = 0; i < sum; i++)
 		{
 
@@ -385,21 +386,20 @@ void C_document(XINXI *YY, int socket_fd)
 			{
 				memset(buf, 0, sizeof(buf));
 
-				recv(socket_fd, sign, sizeof(sign), 0);
-
-				//printf("ret = %d\n", ret);
-				if(strcmp(sign, "ok") == 0)
-				{
-					printf("\t\t文件接收成功！！！\n");
-					close(fd);
-					break;
-				}
-
-				ret = recv(socket_fd, buf, sizeof(buf), 0);
-				write(fd, buf, ret);
+				recv(socket_fd, buf, sizeof(buf), 0);
+				ret = write(fd, buf, sizeof(buf));
 
 				write_len += ret;
+
+				if(write_len >= size)
+				{
+					close(fd);
+					printf("\t\t文件%s发送成功！！！\n", file_name);
+					break;
+				}
+				printf("\t\tsize = %d\nwrite_len = %d\n", size, write_len);
 			}
+			printf("\t\tsize = %d\nwrite_len = %d\n", size, write_len);
 		}
 	}
 	printf("\t\t请输入enter继续!!!\n");
