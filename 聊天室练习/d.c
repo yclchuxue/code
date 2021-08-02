@@ -379,9 +379,9 @@ void C_document(XINXI *YY, int socket_fd)
 			
 			//printf("fd = %d\n", fd);
 
-			int size = atoi(file_len), s_size = 1024;
+			int size = atoi(file_len);
 
-			int write_len = 0;
+			int write_len = 0, s_size = 1024;
 
 			while(1)
 			{
@@ -394,7 +394,7 @@ void C_document(XINXI *YY, int socket_fd)
 					s_size = size - write_len;
 				}
 
-				ret = write(fd, buf, sizeof(buf));
+				ret = write(fd, buf, s_size);
 
 				write_len += ret;
 
