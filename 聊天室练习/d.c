@@ -250,6 +250,7 @@ int main()
 	return 0;
 }
 
+
 void get_XX(int socket_fd)
 {
 	XINXI YY;
@@ -378,7 +379,7 @@ void C_document(XINXI *YY, int socket_fd)
 			
 			//printf("fd = %d\n", fd);
 
-			int size = atoi(file_len);
+			int size = atoi(file_len), s_size = 1024;
 
 			int write_len = 0;
 
@@ -387,6 +388,12 @@ void C_document(XINXI *YY, int socket_fd)
 				memset(buf, 0, sizeof(buf));
 
 				recv(socket_fd, buf, sizeof(buf), 0);
+
+				if(write_len + 1024 > size)
+				{
+					s_size = size - write_len;
+				}
+
 				ret = write(fd, buf, sizeof(buf));
 
 				write_len += ret;
@@ -402,11 +409,11 @@ void C_document(XINXI *YY, int socket_fd)
 			printf("\t\tsize = %d\nwrite_len = %d\n", size, write_len);
 		}
 	}
+	free(XZ);
 	printf("\t\t请输入enter继续!!!\n");
 	setbuf(stdin, NULL);
 	getchar();
 	setbuf(stdin, NULL);
-	free(XZ);
 }
 
 void *thread_g(void *arg)
