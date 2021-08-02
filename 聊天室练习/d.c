@@ -252,6 +252,8 @@ int main()
 
 
 
+#include "cli.h"
+
 void get_XX(int socket_fd)
 {
 	XINXI YY;
@@ -293,6 +295,7 @@ void C_document(XINXI *YY, int socket_fd)
 	}
 	else if(n == 1)     //文件发送
 	{
+
 		setbuf(stdin, NULL);
 		printf("\t\t请输入文件：");
 		scanf("%s", &file_path);
@@ -326,21 +329,23 @@ void C_document(XINXI *YY, int socket_fd)
 			//printf("ret = %d\n", ret);
 			if(ret <= 0)
 			{
-				sprintf(sign, "ok");
-				send(socket_fd, sign, sizeof(sign), 0);
 				close(fd); 
 				printf("\t\t文件%s发送成功！！！\n", file_name);
 				break;
 			}
 
-			sprintf(sign, "no");
-			send(socket_fd, sign, sizeof(sign), 0);
-
-			send(socket_fd, buf, sizeof(buf), ret);
+			send(socket_fd, buf, sizeof(buf), 0);
 
 			send_len += ret;
-		}
 
+			if(send_len == len)
+			{
+				close(fd);
+				printf("\t\t文件%s发送成功!!!\n", file_name);
+				break;
+			}
+		}
+		printf("\t\tlen = %d\n\t\tsend_len = %d\n", len, send_len);
 	}
 	else if(n == 2)     //文件接收
 	{
