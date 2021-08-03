@@ -269,6 +269,7 @@ void get_XX(int socket_fd)
 		}
 		printf("\t\t%s\n", buf);
 	}while(1);
+	//printf("SSSSSS\n");
 }
 
 void C_document(XINXI *YY, int socket_fd)
@@ -317,20 +318,20 @@ void C_document(XINXI *YY, int socket_fd)
 		send(socket_fd, YY, sizeof(XINXI),0);
 
 		int send_len = 0;       //记录发送的字节数
-
+		
 		while(1)
 		{
-			memset(buf, 0, sizeof(buf));
-
+			
 			ret = read(fd, buf, sizeof(buf));
-			//printf("ret = %d\n", ret);
+			
 			if(ret <= 0)
 			{
 				close(fd); 
 				printf("\t\t文件%s发送成功！！！\n", file_name);
 				break;
 			}
-
+			
+			
 			send(socket_fd, buf, sizeof(buf), 0);
 
 			send_len += ret;
@@ -382,11 +383,11 @@ void C_document(XINXI *YY, int socket_fd)
 			int size = atoi(file_len);
 
 			int write_len = 0, s_size = 1024;
-
+			
 			while(1)
 			{
 				memset(buf, 0, sizeof(buf));
-
+				
 				recv(socket_fd, buf, sizeof(buf), 0);
 
 				if(write_len + 1024 > size)
@@ -394,26 +395,30 @@ void C_document(XINXI *YY, int socket_fd)
 					s_size = size - write_len;
 				}
 
-				ret = write(fd, buf, s_size);
+					ret = write(fd, buf, s_size);
 
-				write_len += ret;
+					write_len += ret;	
 
-				if(write_len >= size)
-				{
-					close(fd);
-					printf("\t\t文件%s发送成功！！！\n", file_name);
-					break;
-				}
-				printf("\t\tsize = %d\nwrite_len = %d\n", size, write_len);
+					if(write_len >= size)
+					{
+						close(fd);
+						printf("\t\t文件%s发送成功！！！\n", file_name);
+						break;
+					}
+					printf("\t\tsize = %d\nwrite_len = %d\n", size, write_len);
+				
 			}
+
 			printf("\t\tsize = %d\nwrite_len = %d\n", size, write_len);
 		}
 	}
 	free(XZ);
+	//return;
 	printf("\t\t请输入enter继续!!!\n");
 	setbuf(stdin, NULL);
 	getchar();
 	setbuf(stdin, NULL);
+	//printf("AAAAAAA\n");
 }
 
 void *thread_g(void *arg)
