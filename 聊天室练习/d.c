@@ -69,6 +69,11 @@ typedef struct E_list{
     struct E_list *next;
 }E_LIST;
 
+typedef struct Doc{
+	int sign; //
+	char buf[1024];
+}DOC;
+
 int Socket_fd, Y_ID, M_ID, Q_ID, M;
 
 void C_denn(XINXI *YY, int socket_fd);
@@ -318,11 +323,16 @@ void C_document(XINXI *YY, int socket_fd)
 		send(socket_fd, YY, sizeof(XINXI),0);
 
 		int send_len = 0;       //记录发送的字节数
+
+		int s_ice = 1;
+
+		DOC *D = (DOC*)malloc(sizeof(DOC));
 		
 		while(1)
 		{
-			
-			ret = read(fd, buf, sizeof(buf));
+			memset(D, 0, sizeof(DOC));
+			memset(sign, 0, sizeof(sign));
+			ret = read(fd, D->buf, sizeof(D->buf));
 			
 			if(ret <= 0)
 			{
@@ -330,18 +340,47 @@ void C_document(XINXI *YY, int socket_fd)
 				printf("\t\t文件%s发送成功！！！\n", file_name);
 				break;
 			}
+			D->sign = s_ice;
 			
-			
-			send(socket_fd, buf, sizeof(buf), 0);
+			send(socket_fd, D, sizeof(DOC), 0);
 
-			send_len += ret;
+			recv(socket_fd, sign, sizeof(sign), 0);
+			printf("sign = %s\n", sign);
 
+			if(strcmp(sign, "ok") == 0)
+			{
+				printf("\t\tlen = %d\n\t\tsend_len = %d\n", len, send_len);
+				send_len += ret;
+				++s_ice;
+			}
+			else if(strcmp(sign, "no") == 0)
+			{
+				while(1)
+				{
+					send(socket_fd, D, sizeof(DOC), 0);
+
+					recv(socket_fd, sign, sizeof(sign), 0);
+
+					if(strcmp(sign, "ok") == 0)
+					{
+						printf("\t\tlen = %d\n\t\tsend_len = %d\n", len, send_len);
+						send_len += ret;
+						++s_ice;
+						break;
+					}
+				}
+			}
+			else
+			{
+				exit(-1);
+			}
 			if(send_len == len)
 			{
 				close(fd);
 				printf("\t\t文件%s发送成功!!!\n", file_name);
 				break;
 			}
+			//sleep(1);
 		}
 		printf("\t\tlen = %d\n\t\tsend_len = %d\n", len, send_len);
 	}
@@ -447,7 +486,7 @@ void *thread_g(void *arg)
 			if(XZ.zt > 0)
 			{
 				printf("\b\b\b\b\b\b                          \n");
-				printf("\t\t\033[34m%s : %s\n\033[0m", XZ.name, XZ.xinxi);
+				printf("\t\t\033[34m%s : %s\033[0m", XZ.name, XZ.xinxi);
 			}
 			--n;
 			if(n == 0)
@@ -540,21 +579,13 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 						setbuf(stdin, NULL);
 						fgets(Buf,200,stdin);
 						setbuf(stdin, NULL);
-						do
-						{
-							scanf("%c", &ch);
-							if(ch != '\n')
-							{
-								Buf[i] = ch;
-								i++;
-							}
-						}while(ch != '\n');
+				
 						YY->ice_4 = 888;
 						YY->m_id  = M_ID;
 						strncpy(YY->buf, Buf, sizeof(Buf));
 						//printf("buf: %s\n", YY->buf);
 						//printf("ice_1 = %d\n",YY->ice_1);
-						if(strcmp(YY->buf, "exit") == 0)
+						if(strcmp(YY->buf, "exit\n") == 0)
 						{
 							//printf("杀死线程\n");
 							printf("\033[0m\n");
@@ -562,7 +593,8 @@ void C_group_com(XINXI *YY, DENN *XX, int socket_fd)      //群聊天
 							pthread_join(thid, NULL);   //销毁线程
 							return ;
 						}
-						ret = send(socket_fd, YY, sizeof(XINXI), 0);
+						if(strcmp(YY->buf, "\n") != 0)
+							ret = send(socket_fd, YY, sizeof(XINXI), 0);
 						//printf("buf = %sA\n", buf);
 						setbuf(stdin, NULL);
 						printf("\t\t\033[31mMINE: ");
@@ -1401,7 +1433,7 @@ void *thread(void *arg)
 				char buf[1024]={0};
 				//read(socket_fd,buf,sizeof(buf));
 				recv(Socket_fd, &XZ, sizeof(LIAOT), 0);
-				sprintf(A, "\t\033[34m%s : %s\n\033[0m", XZ.beizhu, XZ.xinxi);
+				sprintf(A, "\t\033[34m%s : %s\033[0m", XZ.beizhu, XZ.xinxi);
 				printf("%s", A);
 			}
 			printf("\t\033[31mMINE :");
@@ -1503,6 +1535,7 @@ void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
 						setbuf(stdin, NULL);
 						fgets(Buf,200,stdin);
 						setbuf(stdin, NULL);
+						/*
 						do
 						{
 							scanf("%c", &ch);
@@ -1512,20 +1545,23 @@ void C_haoyouliaot(XINXI *YY, DENN *XX, int socket_fd)
 								i++;
 							}
 						}while(ch != '\n');
+						*/
 						YY->ice_4 = 777;
 						YY->m_id  = M_ID;
 						strncpy(YY->buf, Buf, sizeof(Buf));
 						//printf("buf: %s\n", YY->buf);
 						//printf("ice_1 = %d\n",YY->ice_1);
-						if(strcmp(YY->buf, "exit") == 0)
+						if(strcmp(YY->buf, "exit\n") == 0)
 						{
 							printf("\033[0m\n");
 							M = 0;
 							pthread_join(thid, NULL);   //销毁线程
 							return ;
 						}
-						ret = send(socket_fd, YY, sizeof(XINXI), 0);
+						if(strcmp(Buf, "\n") != 0)
+							ret = send(socket_fd, YY, sizeof(XINXI), 0);
 						//printf("buf = %sA\n", buf);
+
 
 						printf("\t\033[31mMINE: ");
 						N = 0;
@@ -1563,6 +1599,7 @@ void C_zhuce(XINXI *YY, int socket_fd)
 		strncpy(YY->an, an, sizeof(an));
 		strncpy(YY->hylb, hylb, sizeof(hylb));          //好友列表，以name为mysql—table名
 		send(socket_fd, YY, sizeof(XINXI),0);
+		//printf("YY->m_id = %d\n",YY->m_id);
 		read(socket_fd,buf, sizeof(buf));
 		printf("\t\t%s\n",buf);
 		printf("\t\t请输入enter继续!!!\n");
