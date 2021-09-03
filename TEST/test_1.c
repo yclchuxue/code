@@ -12,14 +12,17 @@ int main()
 
     printf("%s\n", strs);
 
-    scanf("%c", &ch);
+    int n = scanf("%c", &ch);
     
+    if(n == -1)
+        printf("EOF\n");
+
     if(EOF)
     {
-        printf("EOF!!!");
-        exit(1);
+        printf("HJDBDJK\n");
     }
 
+    printf("%d\n", n);
     printf("A%c\n", ch);
 
     return 0;
